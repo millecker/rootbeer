@@ -1,0 +1,36 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="TestStringBuilder.jar" />
+		<delete file="TestStringBuilder-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-master-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="TestStringBuilder.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="TestStringBuilderKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar TestStringBuilder.jar TestStringBuilder-GPU.jar</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-master-branch.jar" />
+			<arg value="TestStringBuilder.jar" />
+			<arg value="TestStringBuilder-GPU.jar" />
+		</exec>
+		<echo>java -Xmx4G -jar TestStringBuilder-GPU.jar 3 1</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="TestStringBuilder-GPU.jar" />
+			<arg value="3" />
+			<arg value="1" />
+		</exec>
+	</target>
+</project>
