@@ -16,20 +16,21 @@
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar TestStringBuilder.jar TestStringBuilder-GPU.jar</echo>
+		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar TestStringBuilder.jar TestStringBuilder-GPU.jar -noexceptions</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
 			<arg value="../../rootbeer-master-branch.jar" />
 			<arg value="TestStringBuilder.jar" />
 			<arg value="TestStringBuilder-GPU.jar" />
+			<arg value="-noexceptions" />
 		</exec>
-		<echo>java -Xmx4G -jar TestStringBuilder-GPU.jar 3 1</echo>
+		<echo>java -Xmx4G -jar TestStringBuilder-GPU.jar 4 1</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
 			<arg value="TestStringBuilder-GPU.jar" />
-			<arg value="3" />
+			<arg value="4" />
 			<arg value="1" />
 		</exec>
 	</target>
