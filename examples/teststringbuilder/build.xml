@@ -6,7 +6,7 @@
 	</target>
 	<target name="compile">
 		<mkdir dir="build/classes" />
-		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-master-branch.jar" includeantruntime="false" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
 	</target>
 	<target name="jar" depends="compile">
 		<jar destfile="TestStringBuilder.jar" basedir="build/classes">
@@ -16,11 +16,11 @@
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar TestStringBuilder.jar TestStringBuilder-GPU.jar -noexceptions</echo>
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar TestStringBuilder.jar TestStringBuilder-GPU.jar -noexceptions</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
-			<arg value="../../rootbeer-master-branch.jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
 			<arg value="TestStringBuilder.jar" />
 			<arg value="TestStringBuilder-GPU.jar" />
 			<arg value="-noexceptions" />
