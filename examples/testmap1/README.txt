@@ -11,8 +11,8 @@ ant clean
 ant run
 
  # Run GPU Kernel
-# java -Xmx4G -jar TestMap-GPU.jar [-DblockSize=2 -DgridSize=1]
+# java -Xmx4G -jar TestMap1-GPU.jar [-DblockSize=2 -DgridSize=1]
 
-# java -Xmx4G -jar TestMap-GPU.jar 2 1
+# java -Xmx4G -jar TestMap1-GPU.jar 2 1
 
 ###############################################################################

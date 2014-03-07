@@ -19,21 +19,20 @@ import java.util.List;
 import org.trifort.rootbeer.runtime.Context;
 import org.trifort.rootbeer.runtime.Kernel;
 import org.trifort.rootbeer.runtime.Rootbeer;
-import org.trifort.rootbeer.runtime.RootbeerGpu;
 import org.trifort.rootbeer.runtime.StatsRow;
 import org.trifort.rootbeer.runtime.ThreadConfig;
 import org.trifort.rootbeer.runtime.util.Stopwatch;
 
-public class TestMapKernel implements Kernel {
+public class TestMap1Kernel implements Kernel {
   // gridSize = amount of blocks and multiprocessors
   public static final int GRID_SIZE = 1; // 14;
   // blockSize = amount of threads
-  public static final int BLOCK_SIZE = 2; // 1024;
+  public static final int BLOCK_SIZE = 1; // 1024;
 
   private int m_N;
   private GpuVectorMap m_map;
 
-  public TestMapKernel(int n) {
+  public TestMap1Kernel(int n) {
     this.m_N = n;
     this.m_map = new GpuVectorMap(n);
   }
@@ -41,25 +40,14 @@ public class TestMapKernel implements Kernel {
   @Override
   public void gpuMethod() {
 
-    // Global thread 0 fills map
-    if (RootbeerGpu.getThreadId() == 0) {
-      double[] vector = new double[1];
-      for (int i = 0; i < m_N; i++) {
-        vector[0] = i;
-        m_map.put(i, vector);
-      }
+    double[] vector1 = new double[m_N];
+    for (int i = 0; i < m_N; i++) {
+      vector1[i] = i;
     }
+    m_map.put(0, vector1);
 
-    // Threadfence and Sync all blocks
-    RootbeerGpu.threadfenceSystem();
-    RootbeerGpu.syncblocks(1);
-
-    // Each block prints out its map item
-    if (RootbeerGpu.getThreadIdxx() == 0) {
-      double[] vector = m_map.get(RootbeerGpu.getBlockIdxx());
-      System.out.println("vector: " + arrayToString(vector));
-    }
-
+    double[] vector2 = m_map.get(0);
+    System.out.println("vector: '" + arrayToString(vector2) + "'");
   }
 
   private String arrayToString(double[] arr) {
@@ -96,7 +84,7 @@ public class TestMapKernel implements Kernel {
     System.out.println("gridSize: " + gridSize);
 
     Rootbeer rootbeer = new Rootbeer();
-    TestMapKernel kernel = new TestMapKernel(GRID_SIZE);
+    TestMap1Kernel kernel = new TestMap1Kernel(GRID_SIZE);
 
     // Run GPU Kernels
     Context context = rootbeer.createDefaultContext();

@@ -1,37 +1,37 @@
 <project default="jar">
 	<target name="clean">
 		<delete dir="build" />
-		<delete file="TestMap.jar" />
-		<delete file="TestMap-GPU.jar" />
+		<delete file="TestMap1.jar" />
+		<delete file="TestMap1-GPU.jar" />
 	</target>
 	<target name="compile">
 		<mkdir dir="build/classes" />
 		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
 	</target>
 	<target name="jar" depends="compile">
-		<jar destfile="TestMap.jar" basedir="build/classes">
+		<jar destfile="TestMap1.jar" basedir="build/classes">
 			<manifest>
-				<attribute name="Main-Class" value="TestMapKernel" />
+				<attribute name="Main-Class" value="TestMap1Kernel" />
 			</manifest>
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar TestMap.jar TestMap-GPU.jar -noexceptions -64bit</echo>
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar TestMap1.jar TestMap1-GPU.jar -noexceptions -64bit</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
 			<arg value="../../rootbeer-develop-branch.jar" />
-			<arg value="TestMap.jar" />
-			<arg value="TestMap-GPU.jar" />
+			<arg value="TestMap1.jar" />
+			<arg value="TestMap1-GPU.jar" />
 			<arg value="-noexceptions" />
 			<arg value="-64bit" />
 		</exec>
-		<echo>java -Xmx4G -jar TestMap-GPU.jar 4 1</echo>
+		<echo>java -Xmx4G -jar TestMap1-GPU.jar 1 1</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
-			<arg value="TestMap-GPU.jar" />
-			<arg value="4" />
+			<arg value="TestMap1-GPU.jar" />
+			<arg value="1" />
 			<arg value="1" />
 		</exec>
 	</target>
