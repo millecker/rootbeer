@@ -47,7 +47,8 @@ public class TestMap1Kernel implements Kernel {
     m_map.put(0, vector1);
 
     double[] vector2 = m_map.get(0);
-    System.out.println("vector: '" + arrayToString(vector2) + "'");
+    System.out.println("vector.len: " + vector2.length);
+    // System.out.println("vector: '" + arrayToString(vector2) + "'");
   }
 
   private String arrayToString(double[] arr) {
