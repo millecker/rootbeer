@@ -1,0 +1,38 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="TestMap3.jar" />
+		<delete file="TestMap3-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="TestMap3.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="TestMap3Kernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar TestMap3.jar TestMap3-GPU.jar -noexceptions -64bit</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="TestMap3.jar" />
+			<arg value="TestMap3-GPU.jar" />
+			<arg value="-noexceptions" />
+			<arg value="-64bit" />
+		</exec>
+		<echo>java -Xmx4G -jar TestMap3-GPU.jar 1 2</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="TestMap3-GPU.jar" />
+			<arg value="1" />
+			<arg value="2" />
+		</exec>
+	</target>
+</project>
