@@ -58,7 +58,8 @@ public class TestMap3Kernel implements Kernel {
     // TODO Only block 1 causes System.out.println to fail
     if ((RootbeerGpu.getThreadIdxx() == 0) && (RootbeerGpu.getBlockIdxx() == 1)) {
       int val = m_map.get(RootbeerGpu.getBlockIdxx());
-      System.out.println("int: " + val);
+      System.out.print("int: ");
+      System.out.println(val); // ERROR
     }
 
   }
