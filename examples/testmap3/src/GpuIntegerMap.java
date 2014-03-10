@@ -59,10 +59,6 @@ public final class GpuIntegerMap {
     return (entry != null) ? (Integer) entry.getValue() : null;
   }
 
-  public KeyValuePair getList(long key) {
-    return m_values[indexForKey(key)];
-  }
-
   public void put(long key, int value) {
     m_used = true;
     int bucketIndex = indexForKey(key);
@@ -70,7 +66,10 @@ public final class GpuIntegerMap {
     if (entry != null) {
       boolean done = false;
       while (!done) {
-        if (entry.getNext() == null) {
+        if (equalsKey(entry, key)) {
+          entry.setValue(value);
+          done = true;
+        } else if (entry.getNext() == null) {
           entry.setNext(new KeyValuePair(key, value));
           done = true;
         }
