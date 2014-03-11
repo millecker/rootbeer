@@ -25,13 +25,16 @@
 			<arg value="OnlineCF-GPU.jar" />
 			<arg value="-64bit" />
 		</exec>
-		<echo>java -Xmx4G -jar OnlineCF-GPU.jar 256 14</echo>
+		<echo>java -Xmx4G -jar OnlineCF-GPU.jar 3 1 3 1 true</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
 			<arg value="OnlineCF-GPU.jar" />
-			<arg value="256" />
-			<arg value="14" />
+			<arg value="3" />
+			<arg value="1" />
+			<arg value="3" />
+			<arg value="1" />
+			<arg value="true" />
 		</exec>
 	</target>
 </project>

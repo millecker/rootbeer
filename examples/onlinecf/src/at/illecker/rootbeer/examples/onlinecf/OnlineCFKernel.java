@@ -17,9 +17,25 @@
 
 package at.illecker.rootbeer.examples.onlinecf;
 
-import org.trifort.rootbeer.runtime.Kernel;
-import org.trifort.rootbeer.runtime.RootbeerGpu;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
+import org.trifort.rootbeer.runtime.Context;
+import org.trifort.rootbeer.runtime.Kernel;
+import org.trifort.rootbeer.runtime.Rootbeer;
+import org.trifort.rootbeer.runtime.RootbeerGpu;
+import org.trifort.rootbeer.runtime.StatsRow;
+import org.trifort.rootbeer.runtime.ThreadConfig;
+import org.trifort.rootbeer.runtime.util.Stopwatch;
+
+/**
+ * Collaborative Filtering based on
+ * 
+ * Singular Value Decomposition for Collaborative Filtering on a GPU
+ * http://iopscience.iop.org/1757-899X/10/1/012017/pdf/1757-899X_10_1_012017.pdf
+ * 
+ */
 public class OnlineCFKernel implements Kernel {
 
   private GpuUserItemMap m_userItemMap;
@@ -30,17 +46,10 @@ public class OnlineCFKernel implements Kernel {
   private double m_ALPHA;
   private int m_matrixRank;
   private int m_maxIterations;
-  private int m_skipCount;
-  private int m_peerCount = 0;
-  private int m_peerId = 0;
-  private String[] m_allPeerNames;
-  private GpuIntegerMap m_counterMap;
-  private GpuIntegerListMap m_senderMap;
 
   public OnlineCFKernel(GpuUserItemMap userItemMap, GpuVectorMap usersMatrix,
-      GpuVectorMap itemsMatrix, GpuIntegerMap counterMap, long n, long m,
-      double alpha, int matrixRank, int maxIterations, int skipCount,
-      int peerCount, int peerId, String[] allPeerNames) {
+      GpuVectorMap itemsMatrix, long n, long m, double alpha, int matrixRank,
+      int maxIterations) {
     this.m_userItemMap = userItemMap;
     this.m_usersMatrix = usersMatrix;
     this.m_itemsMatrix = itemsMatrix;
@@ -49,13 +58,6 @@ public class OnlineCFKernel implements Kernel {
     this.m_ALPHA = alpha;
     this.m_matrixRank = matrixRank;
     this.m_maxIterations = maxIterations;
-    this.m_skipCount = skipCount;
-    this.m_peerCount = peerCount;
-    this.m_peerId = peerId;
-    this.m_allPeerNames = allPeerNames;
-    int itemsMatrixSize = m_itemsMatrix.size();
-    this.m_counterMap = counterMap;
-    this.m_senderMap = new GpuIntegerListMap(itemsMatrixSize);
   }
 
   public void gpuMethod() {
@@ -92,8 +94,6 @@ public class OnlineCFKernel implements Kernel {
       System.out.println("gridSize: " + gridSize);
       System.out.println("usersPerBlock: " + usersPerBlock);
       System.out.println("itemsPerBlock: " + itemsPerBlock);
-      System.out.println("peerCount: " + m_peerCount);
-      System.out.println("peerId: " + m_peerId);
     }
 
     // Start OnlineCF algorithm
@@ -462,12 +462,144 @@ public class OnlineCFKernel implements Kernel {
     return "null";
   }
 
+  public static GpuUserItemMap getUserItemMap() {
+    GpuUserItemMap userItemMap = new GpuUserItemMap(13);
+    userItemMap.put(1, 1, 4);
+    userItemMap.put(1, 2, 2.5);
+    userItemMap.put(1, 3, 3.5);
+    userItemMap.put(1, 4, 1);
+    userItemMap.put(1, 5, 3.5);
+
+    userItemMap.put(2, 1, 4);
+    userItemMap.put(2, 2, 2.5);
+    userItemMap.put(2, 3, 3.5);
+    userItemMap.put(2, 4, 1);
+    userItemMap.put(2, 5, 3.5);
+
+    userItemMap.put(3, 1, 4);
+    userItemMap.put(3, 2, 2.5);
+    userItemMap.put(3, 3, 3.5);
+
+    return userItemMap;
+  }
+
+  public static double[] getRandomArray(Random rand, int size) {
+    double[] arr = new double[size];
+    for (int i = 0; i < size; i++) {
+      arr[i] = rand.nextDouble();
+    }
+    return arr;
+  }
+
+  public static GpuVectorMap getVectorMap(Random rand, int size, int matrixRank) {
+    GpuVectorMap vectorMap = new GpuVectorMap(size);
+    for (int i = 1; i <= size; i++) {
+      vectorMap.put(i, getRandomArray(rand, matrixRank));
+    }
+    return vectorMap;
+  }
+
   public static void main(String[] args) {
-    // Dummy invocation
-    // otherwise Rootbeer will remove constructors and methods
-    new OnlineCFKernel(null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null);
-    new GpuUserItemMap().put(0, 0, 0);
-    new GpuVectorMap().put(0, null);
-    new GpuIntegerMap();
+
+    int blockSize = 256;
+    int gridSize = 14;
+    boolean isDebbuging = false;
+    Random rand = new Random(32L);
+
+    final double ALPHA = 0.01;
+    int matrixRank = 3;
+    int maxIterations = 1;
+    int userCount = 3;
+    int itemCount = 5;
+
+    // parse arguments
+    if ((args.length > 0) && (args.length == 5)) {
+      blockSize = Integer.parseInt(args[0]);
+      gridSize = Integer.parseInt(args[1]);
+      matrixRank = Integer.parseInt(args[2]);
+      maxIterations = Integer.parseInt(args[3]);
+      isDebbuging = Boolean.parseBoolean(args[4]);
+    } else {
+      System.out.println("Wrong argument size!");
+      System.out.println("    Argument1=blockSize");
+      System.out.println("    Argument2=gridSize");
+      System.out.println("    Argument3=matrixRank");
+      System.out.println("    Argument4=maxIterations");
+      System.out.println("    Argument5=debug(true|false=default)");
+      return;
+    }
+
+    if (blockSize < matrixRank) {
+      System.err.println("blockSize < matrixRank");
+      return;
+    }
+
+    System.out.println("blockSize: " + blockSize);
+    System.out.println("gridSize: " + gridSize);
+    System.out.println("matrixRank: " + matrixRank);
+    System.out.println("maxIterations: " + maxIterations);
+
+    // Prepare input
+    GpuUserItemMap userItemMap = getUserItemMap();
+    GpuVectorMap usersMap = getVectorMap(rand, userCount, matrixRank);
+    GpuVectorMap itemsMap = getVectorMap(rand, itemCount, matrixRank);
+
+    // Debug users
+    if (isDebbuging) {
+      System.out.println(usersMap.size() + " users");
+      for (int i = 1; i <= userCount; i++) {
+        System.out.println("user: " + i + " vector: "
+            + Arrays.toString(usersMap.get(i)));
+      }
+    }
+    // Debug items
+    if (isDebbuging) {
+      System.out.println(itemsMap.size() + " items");
+      for (int i = 1; i <= itemCount; i++) {
+        System.out.println("item: " + i + " vector: "
+            + Arrays.toString(itemsMap.get(i)));
+      }
+    }
+
+    // Run GPU Kernels
+    OnlineCFKernel kernel = new OnlineCFKernel(userItemMap, usersMap, itemsMap,
+        userCount, itemCount, ALPHA, matrixRank, maxIterations);
+
+    Rootbeer rootbeer = new Rootbeer();
+    Context context = rootbeer.createDefaultContext();
+    Stopwatch watch = new Stopwatch();
+    watch.start();
+    rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
+        * gridSize), context);
+    watch.stop();
+
+    List<StatsRow> stats = context.getStats();
+    for (StatsRow row : stats) {
+      System.out.println("  StatsRow:");
+      System.out.println("    serial time: " + row.getSerializationTime());
+      System.out.println("    exec time: " + row.getExecutionTime());
+      System.out.println("    deserial time: " + row.getDeserializationTime());
+      System.out.println("    num blocks: " + row.getNumBlocks());
+      System.out.println("    num threads: " + row.getNumThreads());
+      System.out.println("GPUTime: " + watch.elapsedTimeMillis() + " ms");
+    }
+
+    // Debug user information
+    if (isDebbuging) {
+      System.out.println(usersMap.size() + " users");
+      for (int i = 1; i <= userCount; i++) {
+        System.out.println("user: " + i + " vector: "
+            + Arrays.toString(usersMap.get(i)));
+      }
+    }
+    // Debug item information
+    if (isDebbuging) {
+      System.out.println(itemsMap.size() + " items");
+      for (int i = 1; i <= itemCount; i++) {
+        System.out.println("item: " + i + " vector: "
+            + Arrays.toString(itemsMap.get(i)));
+      }
+    }
+
   }
 }

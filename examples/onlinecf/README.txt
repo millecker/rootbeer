@@ -11,8 +11,9 @@ ant clean
 ant run
 
  # Run GPU Kernel
-# java -Xmx4G -jar OnlineCF-GPU.jar [-DblockSize=2 -DgridSize=1]
+# java -Xmx4G -jar OnlineCF-GPU.jar \
+  [blockSize=256 gridSize=14 matrixRank=3 maxIterations=1 debug=false]
 
-# java -Xmx4G -jar OnlineCF-GPU.jar 256 14
+# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 1 true
 
 ###############################################################################
