@@ -210,6 +210,7 @@ public class MatrixMultiplication1Kernel implements Kernel {
     double[][] matrixC = kernel.resultMatrix.matrix;
     double[][] matrixD = multiply(matrixA, matrixB, n, n, n);
 
+    // Debug
     List<StatsRow> stats = context.getStats();
     for (StatsRow row : stats) {
       System.out.println("  StatsRow:");

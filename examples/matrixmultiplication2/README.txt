@@ -1,5 +1,5 @@
 ###############################################################################
-##### MatrixMultiplication1 Example                                       #####
+##### MatrixMultiplication2 Example                                       #####
 ###############################################################################
 
 # Use Apache Ant to build and run example
@@ -11,9 +11,9 @@ ant clean
 ant run
 
  # Run GPU Kernel
-# java -Xmx4G -jar MatrixMultiplication1-GPU.jar \
-  [blockSize=256 gridSize=14 n=1024 debug=false]
+# java -Xmx4G -jar MatrixMultiplication2-GPU.jar \
+  [n=32*32 debug=false]
 
-# java -Xmx4G -jar MatrixMultiplication1-GPU.jar 256 14 1024 false
+# java -Xmx4G -jar MatrixMultiplication2-GPU.jar 32 false
 
 ###############################################################################
