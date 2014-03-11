@@ -1,0 +1,41 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="PiEstimator.jar" />
+		<delete file="PiEstimator-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="PiEstimator.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.piestimator.PiEstimatorKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar PiEstimator.jar PiEstimator-GPU.jar -64bit -noexceptions -shared-mem-size 8204 -maxrregcount 32</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="PiEstimator.jar" />
+			<arg value="PiEstimator-GPU.jar" />
+			<arg value="-64bit" />
+			<arg value="-noexceptions" />
+			<arg value="-shared-mem-size 8204" />
+			<arg value="-maxrregcount 32" />
+		</exec>
+		<echo>java -Xmx4G -jar PiEstimator-GPU.jar 1024 14 100000</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="PiEstimator-GPU.jar" />
+			<arg value="1024" />
+			<arg value="14" />
+			<arg value="100000" />
+		</exec>
+	</target>
+</project>
