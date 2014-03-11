@@ -1,65 +1,65 @@
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
+package at.illecker.rootbeer.examples.teststringbuilder;
+
 import java.util.List;
 
 import org.trifort.rootbeer.runtime.Context;
 import org.trifort.rootbeer.runtime.Kernel;
 import org.trifort.rootbeer.runtime.Rootbeer;
+import org.trifort.rootbeer.runtime.RootbeerGpu;
 import org.trifort.rootbeer.runtime.StatsRow;
 import org.trifort.rootbeer.runtime.ThreadConfig;
 import org.trifort.rootbeer.runtime.util.Stopwatch;
 
-public class TestMap1Kernel implements Kernel {
+public class TestStringBuilderKernel implements Kernel {
   // gridSize = amount of blocks and multiprocessors
   public static final int GRID_SIZE = 1; // 14;
   // blockSize = amount of threads
-  public static final int BLOCK_SIZE = 1; // 1024;
-
-  private int m_N;
-  private GpuVectorMap m_map;
-
-  public TestMap1Kernel(int n) {
-    this.m_N = n;
-    this.m_map = new GpuVectorMap(n);
-  }
+  public static final int BLOCK_SIZE = 2; // 1024;
 
   @Override
   public void gpuMethod() {
+    int sharedMemoryIndex = 0;
 
-    double[] vector1 = new double[m_N];
-    for (int i = 0; i < m_N; i++) {
-      vector1[i] = i;
+    // Update sharedMemory
+    if (RootbeerGpu.getThreadIdxx() == 0) {
+      RootbeerGpu.setSharedInteger(sharedMemoryIndex, 0);
     }
-    m_map.put(0, vector1);
+    // Sync threads within block
+    RootbeerGpu.syncthreads();
 
-    double[] vector2 = m_map.get(0);
-    System.out.println("vector.len: " + vector2.length);
-    // System.out.println("vector: '" + arrayToString(vector2) + "'");
-  }
+    // Thread 0 of each block
+    if (RootbeerGpu.getThreadIdxx() == 0) {
 
-  private String arrayToString(double[] arr) {
-    if (arr != null) {
-      String result = "";
-      for (int i = 0; i < arr.length; i++) {
-        result += (i + 1 == arr.length) ? arr[i] : (arr[i] + ",");
-      }
-      return result;
+      StringBuilder sb = new StringBuilder();
+
+      // Error
+      sb.toString();
+
+      // Update sharedMemory
+      RootbeerGpu.setSharedInteger(sharedMemoryIndex, 1);
     }
-    return "null";
+
+    // Sync threads within block
+    RootbeerGpu.syncthreads();
+
+    // Check if all threads have updated sharedMemory
+    System.out.println(RootbeerGpu.getSharedInteger(sharedMemoryIndex));
   }
 
   public static void main(String[] args) {
@@ -85,7 +85,7 @@ public class TestMap1Kernel implements Kernel {
     System.out.println("gridSize: " + gridSize);
 
     Rootbeer rootbeer = new Rootbeer();
-    TestMap1Kernel kernel = new TestMap1Kernel(GRID_SIZE);
+    TestStringBuilderKernel kernel = new TestStringBuilderKernel();
 
     // Run GPU Kernels
     Context context = rootbeer.createDefaultContext();
