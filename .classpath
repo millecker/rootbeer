@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="src" path="examples/onlinecf/src"/>
 	<classpathentry kind="src" path="examples/testmap1/src"/>
 	<classpathentry kind="src" path="examples/testmap2/src"/>
 	<classpathentry kind="src" path="examples/testmap3/src"/>

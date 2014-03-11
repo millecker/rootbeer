@@ -1,0 +1,37 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="OnlineCF.jar" />
+		<delete file="OnlineCF-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="OnlineCF.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="OnlineCFKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF.jar OnlineCF-GPU.jar -64bit</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="OnlineCF.jar" />
+			<arg value="OnlineCF-GPU.jar" />
+			<arg value="-64bit" />
+		</exec>
+		<echo>java -Xmx4G -jar OnlineCF-GPU.jar 256 14</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="OnlineCF-GPU.jar" />
+			<arg value="256" />
+			<arg value="14" />
+		</exec>
+	</target>
+</project>
