@@ -21,19 +21,19 @@ import org.trifort.rootbeer.runtime.KeyValuePair;
 
 public final class GpuUserItemMap {
   public static final int DEFAULT_CAPACITY = 16;
-  private KeyValuePair[] m_values = null;
+  private GpuKeyValuePair[] m_values = null;
 
   public GpuUserItemMap() {
     this(DEFAULT_CAPACITY);
   }
 
   public GpuUserItemMap(int size) {
-    this.m_values = new KeyValuePair[size];
+    this.m_values = new GpuKeyValuePair[size];
   }
 
-  private boolean equalsKey(KeyValuePair entry, long userId, long itemId) {
+  private boolean equalsKey(GpuKeyValuePair entry, long userId, long itemId) {
     if (entry != null) {
-      KeyValuePair key = (KeyValuePair) entry.getKey();
+      GpuKeyValuePair key = (GpuKeyValuePair) entry.getKey();
       if (key != null) {
         return (((Long) key.getKey()) == userId)
             && (((Long) key.getValue()) == itemId);
@@ -55,7 +55,7 @@ public final class GpuUserItemMap {
   }
 
   public Double get(long userId, long itemId) {
-    KeyValuePair entry = m_values[indexForKey(userId, itemId)];
+    GpuKeyValuePair entry = m_values[indexForKey(userId, itemId)];
     while (entry != null && !equalsKey(entry, userId, itemId)) {
       entry = entry.getNext();
     }
