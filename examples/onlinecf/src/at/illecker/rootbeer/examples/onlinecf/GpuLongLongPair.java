@@ -20,39 +20,39 @@ package at.illecker.rootbeer.examples.onlinecf;
 /**
  * Mutable class for key values.
  */
-public class GpuKeyValuePair {
+public class GpuLongLongPair {
 
-  private GpuLongLongPair m_key;
-  private double m_value;
-  private GpuKeyValuePair m_next;
+  private long m_key;
+  private long m_value;
+  private GpuLongLongPair m_next;
 
-  public GpuKeyValuePair(GpuLongLongPair key, double value) {
+  public GpuLongLongPair(long key, long value) {
     this.m_key = key;
     this.m_value = value;
     this.m_next = null;
   }
 
-  public void setKey(GpuLongLongPair key) {
+  public void setKey(long key) {
     this.m_key = key;
   }
 
-  public GpuLongLongPair getKey() {
+  public long getKey() {
     return m_key;
   }
 
-  public void setValue(double value) {
+  public void setValue(long value) {
     this.m_value = value;
   }
 
-  public double getValue() {
+  public long getValue() {
     return m_value;
   }
 
-  public void setNext(GpuKeyValuePair next) {
+  public void setNext(GpuLongLongPair next) {
     this.m_next = next;
   }
 
-  public GpuKeyValuePair getNext() {
+  public GpuLongLongPair getNext() {
     return m_next;
   }
 }

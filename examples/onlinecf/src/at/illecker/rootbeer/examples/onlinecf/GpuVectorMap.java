@@ -19,7 +19,7 @@ package at.illecker.rootbeer.examples.onlinecf;
 
 public final class GpuVectorMap {
   public static final int DEFAULT_CAPACITY = 16;
-  private GpuKeyValuePair[] m_values = null;
+  private GpuLongVectorPair[] m_values = null;
   private boolean m_used = false;
 
   public GpuVectorMap() {
@@ -27,7 +27,7 @@ public final class GpuVectorMap {
   }
 
   public GpuVectorMap(int size) {
-    this.m_values = new GpuKeyValuePair[size];
+    this.m_values = new GpuLongVectorPair[size];
   }
 
   public int size() {
@@ -42,10 +42,9 @@ public final class GpuVectorMap {
     }
   }
 
-  private boolean equalsKey(GpuKeyValuePair entry, long otherKey) {
+  private boolean equalsKey(GpuLongVectorPair entry, long otherKey) {
     if (entry != null) {
-      long key = (Long) entry.getKey();
-      return (key == otherKey);
+      return (entry.getKey() == otherKey);
     }
     return false;
   }
@@ -55,17 +54,17 @@ public final class GpuVectorMap {
   }
 
   public double[] get(long key) {
-    GpuKeyValuePair entry = m_values[indexForKey(key)];
+    GpuLongVectorPair entry = m_values[indexForKey(key)];
     while (entry != null && !equalsKey(entry, key)) {
       entry = entry.getNext();
     }
-    return (entry != null) ? (double[]) entry.getValue() : null;
+    return (entry != null) ? entry.getValue() : null;
   }
 
   public void put(long key, double[] value) {
     m_used = true;
     int bucketIndex = indexForKey(key);
-    GpuKeyValuePair entry = m_values[bucketIndex];
+    GpuLongVectorPair entry = m_values[bucketIndex];
     if (entry != null) {
       boolean done = false;
       while (!done) {
@@ -73,20 +72,20 @@ public final class GpuVectorMap {
           entry.setValue(value);
           done = true;
         } else if (entry.getNext() == null) {
-          entry.setNext(new GpuKeyValuePair(key, value));
+          entry.setNext(new GpuLongVectorPair(key, value));
           done = true;
         }
         entry = entry.getNext();
       }
     } else {
-      m_values[bucketIndex] = new GpuKeyValuePair(key, value);
+      m_values[bucketIndex] = new GpuLongVectorPair(key, value);
     }
   }
 
   public void add(long key, double[] value) {
     m_used = true;
     int bucketIndex = indexForKey(key);
-    GpuKeyValuePair entry = m_values[bucketIndex];
+    GpuLongVectorPair entry = m_values[bucketIndex];
     if (entry != null) {
       boolean done = false;
       while (!done) {
@@ -98,13 +97,13 @@ public final class GpuVectorMap {
           entry.setValue(vector);
           done = true;
         } else if (entry.getNext() == null) {
-          entry.setNext(new GpuKeyValuePair(key, value));
+          entry.setNext(new GpuLongVectorPair(key, value));
           done = true;
         }
         entry = entry.getNext();
       }
     } else {
-      m_values[bucketIndex] = new GpuKeyValuePair(key, value);
+      m_values[bucketIndex] = new GpuLongVectorPair(key, value);
     }
   }
 

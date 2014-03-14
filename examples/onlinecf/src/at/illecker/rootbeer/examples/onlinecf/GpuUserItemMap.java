@@ -17,7 +17,6 @@
  */
 package at.illecker.rootbeer.examples.onlinecf;
 
-
 public final class GpuUserItemMap {
   public static final int DEFAULT_CAPACITY = 16;
   private GpuKeyValuePair[] m_values = null;
@@ -32,10 +31,9 @@ public final class GpuUserItemMap {
 
   private boolean equalsKey(GpuKeyValuePair entry, long userId, long itemId) {
     if (entry != null) {
-      GpuKeyValuePair key = (GpuKeyValuePair) entry.getKey();
+      GpuLongLongPair key = entry.getKey();
       if (key != null) {
-        return (((Long) key.getKey()) == userId)
-            && (((Long) key.getValue()) == itemId);
+        return (key.getKey() == userId) && (key.getValue() == itemId);
       }
     }
     return false;
@@ -72,13 +70,13 @@ public final class GpuUserItemMap {
           done = true;
         } else if (entry.getNext() == null) {
           entry.setNext(new GpuKeyValuePair(
-              new GpuKeyValuePair(userId, itemId), value));
+              new GpuLongLongPair(userId, itemId), value));
           done = true;
         }
         entry = entry.getNext();
       }
     } else {
-      m_values[bucketIndex] = new GpuKeyValuePair(new GpuKeyValuePair(userId,
+      m_values[bucketIndex] = new GpuKeyValuePair(new GpuLongLongPair(userId,
           itemId), value);
     }
   }
