@@ -615,9 +615,7 @@ public class OnlineCFKernel implements Kernel {
 
       // Convert preferences to UserItemMap
       userItemMap = new GpuUserItemMap(preferences.size());
-      if (isDebbuging) {
-        System.out.println("userItemMap: length: " + preferences.size());
-      }
+      System.out.println("userItemMap: length: " + preferences.size());
       for (double[] v : preferences) {
         userItemMap.put((long) v[0], (long) v[1], v[2]);
         if (isDebbuging) {
@@ -628,9 +626,7 @@ public class OnlineCFKernel implements Kernel {
 
       // Convert usersMatrix to GpuVectorMap
       usersMap = new GpuVectorMap(usersMatrix.size());
-      if (isDebbuging) {
-        System.out.println("usersMap: length: " + usersMatrix.size());
-      }
+      System.out.println("usersMap: length: " + usersMatrix.size());
       Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
           .iterator();
       while (userIt.hasNext()) {
@@ -647,9 +643,7 @@ public class OnlineCFKernel implements Kernel {
 
       // Convert itemsMatrix to GpuVectorMap
       itemsMap = new GpuVectorMap(itemsMatrix.size());
-      if (isDebbuging) {
-        System.out.println("itemsMap: length: " + itemsMatrix.size());
-      }
+      System.out.println("itemsMap: length: " + itemsMatrix.size());
       Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
           .iterator();
       while (itemIt.hasNext()) {
