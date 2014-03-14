@@ -22,21 +22,21 @@ package at.illecker.rootbeer.examples.onlinecf;
  */
 public class GpuKeyValuePair {
 
-  private long m_key;
+  private Object m_key;
   private Object m_value;
   private GpuKeyValuePair m_next;
 
-  public GpuKeyValuePair(long key, Object value) {
+  public GpuKeyValuePair(Object key, Object value) {
     this.m_key = key;
     this.m_value = value;
     this.m_next = null;
   }
 
-  public void setKey(long key) {
+  public void setKey(Object key) {
     this.m_key = key;
   }
 
-  public long getKey() {
+  public Object getKey() {
     return m_key;
   }
 

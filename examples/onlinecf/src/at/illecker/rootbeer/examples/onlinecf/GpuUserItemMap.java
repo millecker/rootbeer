@@ -17,7 +17,6 @@
  */
 package at.illecker.rootbeer.examples.onlinecf;
 
-import org.trifort.rootbeer.runtime.KeyValuePair;
 
 public final class GpuUserItemMap {
   public static final int DEFAULT_CAPACITY = 16;
@@ -64,7 +63,7 @@ public final class GpuUserItemMap {
 
   public void put(long userId, long itemId, double value) {
     int bucketIndex = indexForKey(userId, itemId);
-    KeyValuePair entry = m_values[bucketIndex];
+    GpuKeyValuePair entry = m_values[bucketIndex];
     if (entry != null) {
       boolean done = false;
       while (!done) {
@@ -72,15 +71,15 @@ public final class GpuUserItemMap {
           entry.setValue(value);
           done = true;
         } else if (entry.getNext() == null) {
-          entry.setNext(new KeyValuePair(new KeyValuePair(userId, itemId),
-              value));
+          entry.setNext(new GpuKeyValuePair(
+              new GpuKeyValuePair(userId, itemId), value));
           done = true;
         }
         entry = entry.getNext();
       }
     } else {
-      m_values[bucketIndex] = new KeyValuePair(
-          new KeyValuePair(userId, itemId), value);
+      m_values[bucketIndex] = new GpuKeyValuePair(new GpuKeyValuePair(userId,
+          itemId), value);
     }
   }
 

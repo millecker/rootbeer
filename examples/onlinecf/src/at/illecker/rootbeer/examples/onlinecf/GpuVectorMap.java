@@ -44,7 +44,8 @@ public final class GpuVectorMap {
 
   private boolean equalsKey(GpuKeyValuePair entry, long otherKey) {
     if (entry != null) {
-      return (entry.getKey() == otherKey);
+      long key = (Long) entry.getKey();
+      return (key == otherKey);
     }
     return false;
   }
