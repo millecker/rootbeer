@@ -17,8 +17,16 @@
 
 package at.illecker.rootbeer.examples.onlinecf;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Random;
 
 import org.trifort.rootbeer.runtime.Context;
@@ -353,7 +361,7 @@ public class OnlineCFKernel implements Kernel {
 
               // Ensure all multiplications were saved in SharedMemory
               // RootbeerGpu.threadfenceBlock();
-              
+
               // Sync all threads within a block
               RootbeerGpu.syncthreads();
 
@@ -502,14 +510,19 @@ public class OnlineCFKernel implements Kernel {
     int maxIterations = 1;
     int userCount = 3;
     int itemCount = 5;
+    String inputFile = "";
 
     // parse arguments
-    if ((args.length > 0) && (args.length == 5)) {
+    if ((args.length > 0) && (args.length >= 5)) {
       blockSize = Integer.parseInt(args[0]);
       gridSize = Integer.parseInt(args[1]);
       matrixRank = Integer.parseInt(args[2]);
       maxIterations = Integer.parseInt(args[3]);
       isDebbuging = Boolean.parseBoolean(args[4]);
+      // optional parameters
+      if (args.length > 5) {
+        inputFile = args[5];
+      }
     } else {
       System.out.println("Wrong argument size!");
       System.out.println("    Argument1=blockSize");
@@ -517,6 +530,14 @@ public class OnlineCFKernel implements Kernel {
       System.out.println("    Argument3=matrixRank");
       System.out.println("    Argument4=maxIterations");
       System.out.println("    Argument5=debug(true|false=default)");
+      System.out
+          .println("    Argument6=inputFile (optional) | MovieLens inputFile");
+      return;
+    }
+
+    // Check if inputFile exists
+    if ((!inputFile.isEmpty()) && (!new File(inputFile).exists())) {
+      System.out.println("Error: inputFile: " + inputFile + " does not exist!");
       return;
     }
 
@@ -531,9 +552,118 @@ public class OnlineCFKernel implements Kernel {
     System.out.println("maxIterations: " + maxIterations);
 
     // Prepare input
-    GpuUserItemMap userItemMap = getUserItemMap();
-    GpuVectorMap usersMap = getVectorMap(rand, userCount, matrixRank);
-    GpuVectorMap itemsMap = getVectorMap(rand, itemCount, matrixRank);
+    GpuUserItemMap userItemMap = null;
+    GpuVectorMap usersMap = null;
+    GpuVectorMap itemsMap = null;
+
+    if (inputFile.isEmpty()) { // no inputFile
+
+      userItemMap = getUserItemMap();
+      usersMap = getVectorMap(rand, userCount, matrixRank);
+      itemsMap = getVectorMap(rand, itemCount, matrixRank);
+
+    } else { // parse inputFile
+
+      List<double[]> preferences = new ArrayList<double[]>();
+      HashMap<Long, double[]> usersMatrix = new HashMap<Long, double[]>();
+      HashMap<Long, double[]> itemsMatrix = new HashMap<Long, double[]>();
+
+      try {
+
+        BufferedReader br = new BufferedReader(new FileReader(inputFile));
+        String line;
+        while ((line = br.readLine()) != null) {
+          String[] values = line.split("\\t");
+          long userId = Long.parseLong(values[0]);
+          long itemId = Long.parseLong(values[1]);
+          double rating = Double.parseDouble(values[2]);
+          // System.out.println("userId: " + userId + " itemId: " + itemId
+          // + " rating: " + rating);
+
+          // Add User vector
+          if (usersMatrix.containsKey(userId) == false) {
+            double[] vals = new double[matrixRank];
+            for (int i = 0; i < matrixRank; i++) {
+              vals[i] = rand.nextDouble();
+            }
+            usersMatrix.put(userId, vals);
+          }
+
+          // Add Item vector
+          if (itemsMatrix.containsKey(itemId) == false) {
+            double[] vals = new double[matrixRank];
+            for (int i = 0; i < matrixRank; i++) {
+              vals[i] = rand.nextDouble();
+            }
+            itemsMatrix.put(itemId, vals);
+          }
+
+          // Add preference
+          double vector[] = new double[3];
+          vector[0] = userId;
+          vector[1] = itemId;
+          vector[2] = rating;
+          preferences.add(vector);
+        }
+        br.close();
+
+      } catch (NumberFormatException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+
+      // Convert preferences to UserItemMap
+      userItemMap = new GpuUserItemMap(preferences.size());
+      if (isDebbuging) {
+        System.out.println("userItemMap: length: " + preferences.size());
+      }
+      for (double[] v : preferences) {
+        userItemMap.put((long) v[0], (long) v[1], v[2]);
+        if (isDebbuging) {
+          System.out.println("userItemMap userId: '" + v[0] + "' itemId: '"
+              + v[1] + "' value: '" + v[2]);
+        }
+      }
+
+      // Convert usersMatrix to GpuVectorMap
+      usersMap = new GpuVectorMap(usersMatrix.size());
+      if (isDebbuging) {
+        System.out.println("usersMap: length: " + usersMatrix.size());
+      }
+      Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
+          .iterator();
+      while (userIt.hasNext()) {
+        Entry<Long, double[]> entry = userIt.next();
+        long userId = entry.getKey();
+        double[] vector = entry.getValue();
+        usersMap.put(userId, vector);
+
+        if (isDebbuging) {
+          System.out.println("usersMap userId: '" + userId + " value: '"
+              + Arrays.toString(vector));
+        }
+      }
+
+      // Convert itemsMatrix to GpuVectorMap
+      itemsMap = new GpuVectorMap(itemsMatrix.size());
+      if (isDebbuging) {
+        System.out.println("itemsMap: length: " + itemsMatrix.size());
+      }
+      Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
+          .iterator();
+      while (itemIt.hasNext()) {
+        Entry<Long, double[]> entry = itemIt.next();
+        long itemId = entry.getKey();
+        double[] vector = entry.getValue();
+        itemsMap.put(itemId, vector);
+
+        if (isDebbuging) {
+          System.out.println("itemsMap itemId: '" + itemId + " value: '"
+              + Arrays.toString(vector));
+        }
+      }
+    }
 
     // Debug users
     if (isDebbuging) {
