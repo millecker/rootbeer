@@ -47,7 +47,7 @@ public class TestMapKernel implements Kernel {
     // Setup sharedMemory from Map
     if (thread_idxx == 0) {
       double[] vector = m_map.get(block_idxx);
-      printArray(vector);
+      debug(block_idxx, vector);
       for (int i = 0; i < vector.length; i++) {
         RootbeerGpu.setSharedDouble(i * 8, vector[i]);
       }
@@ -70,10 +70,14 @@ public class TestMapKernel implements Kernel {
     }
   }
 
-  private synchronized void printArray(double[] arr) {
-    System.out.println(arrayToString(arr));
+  private synchronized void debug(int val, double[] arr) {
+    System.out.print("(");
+    System.out.print(val);
+    System.out.print(",");
+    System.out.print(arrayToString(arr));
+    System.out.println(")");
   }
-  
+
   private String arrayToString(double[] arr) {
     if (arr != null) {
       String result = "";
