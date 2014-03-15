@@ -27,8 +27,6 @@ import org.trifort.rootbeer.runtime.StatsRow;
 import org.trifort.rootbeer.runtime.ThreadConfig;
 import org.trifort.rootbeer.runtime.util.Stopwatch;
 
-import at.illecker.rootbeer.examples.testmap1.GpuVectorMap;
-
 public class TestMapKernel implements Kernel {
   // gridSize = amount of blocks and multiprocessors
   public static final int GRID_SIZE = 1; // 14;
