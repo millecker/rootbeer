@@ -105,7 +105,7 @@ public class TestMapKernel implements Kernel {
     System.out.println("input: ");
     for (int i = 0; i < gridSize; i++) {
       for (int j = 0; j < blockSize; j++) {
-        vector[j] = i;
+        vector[j] = (i * gridSize) + j;
       }
       vectorMap.put(i, vector);
       System.out.println("(" + i + "," + Arrays.toString(vector) + ")");
@@ -137,15 +137,18 @@ public class TestMapKernel implements Kernel {
     boolean verified = true;
     System.out.println("output: ");
     for (int i = 0; i < gridSize; i++) {
-      double[] v1 = kernel.m_map.get(i);
-      System.out.println("(" + i + "," + Arrays.toString(v1) + ")");
-      double[] v2 = new double[v1.length];
-      for (int j = 0; j < v1.length; j++) {
-        v2[j] = i + 1;
-      }
-      if (!Arrays.equals(v1, v2)) {
-        verified = false;
+      if (!verified) {
         break;
+      }
+      double[] v = kernel.m_map.get(i);
+      System.out.println("(" + i + "," + Arrays.toString(v) + ")");
+      for (int j = 0; j < blockSize; j++) {
+        double value = v[j];
+        double expected_value = (i * gridSize) + j + 1;
+        if (value != expected_value) {
+          verified = false;
+          break;
+        }
       }
     }
 
