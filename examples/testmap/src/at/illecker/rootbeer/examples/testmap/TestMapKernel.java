@@ -119,6 +119,10 @@ public class TestMapKernel implements Kernel {
       vectorMap.put(i, vector);
       System.out.println("(" + i + "," + Arrays.toString(vector) + ")");
     }
+    System.out.println("check input: ");
+    for (int i = 0; i < gridSize; i++) {
+      System.out.println("(" + i + "," + Arrays.toString(vectorMap.get(i)) + ")");
+    }
 
     // Run GPU Kernels
     Rootbeer rootbeer = new Rootbeer();
