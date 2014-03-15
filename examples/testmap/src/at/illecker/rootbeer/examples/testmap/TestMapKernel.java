@@ -50,14 +50,12 @@ public class TestMapKernel implements Kernel {
       printArray(vector);
       for (int i = 0; i < vector.length; i++) {
         RootbeerGpu.setSharedDouble(i * 8, vector[i]);
-        System.out.println(vector[i]);
       }
     }
     RootbeerGpu.syncthreads();
 
     // Each kernel increments one item
     double val = RootbeerGpu.getSharedDouble(thread_idxx * 8);
-    System.out.println(val);
     RootbeerGpu.setSharedDouble(thread_idxx * 8, val + 1);
 
     RootbeerGpu.syncthreads();
