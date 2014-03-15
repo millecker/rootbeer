@@ -1,0 +1,38 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="Test2KeyMap.jar" />
+		<delete file="Test2KeyMap-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-master-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="Test2KeyMap.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.test2keymap.TestTwoKeyMapKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar Test2KeyMap.jar Test2KeyMap-GPU.jar -noexceptions -64bit</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-master-branch.jar" />
+			<arg value="Test2KeyMap.jar" />
+			<arg value="Test2KeyMap-GPU.jar" />
+			<arg value="-noexceptions" />
+			<arg value="-64bit" />
+		</exec>
+		<echo>java -Xmx4G -jar Test2KeyMap-GPU.jar 1 1</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="Test2KeyMap-GPU.jar" />
+			<arg value="1" />
+			<arg value="1" />
+		</exec>
+	</target>
+</project>
