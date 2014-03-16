@@ -110,18 +110,14 @@ public class TestMapKernel implements Kernel {
 
     // Prepare vectorMap
     GpuVectorMap vectorMap = new GpuVectorMap(gridSize);
-    double[] vector = new double[blockSize];
     System.out.println("input: ");
     for (int i = 0; i < gridSize; i++) {
+      double[] vector = new double[blockSize];
       for (int j = 0; j < blockSize; j++) {
         vector[j] = (i * gridSize) + j;
       }
       vectorMap.put(i, vector);
       System.out.println("(" + i + "," + Arrays.toString(vector) + ")");
-    }
-    System.out.println("check input: ");
-    for (int i = 0; i < gridSize; i++) {
-      System.out.println("(" + i + "," + Arrays.toString(vectorMap.get(i)) + ")");
     }
 
     // Run GPU Kernels
