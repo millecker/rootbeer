@@ -59,7 +59,7 @@ public final class GpuUserItemMap {
     return (entry != null) ? (Double) entry.getValue() : null;
   }
 
-  public void put(long userId, long itemId, double value) {
+  public synchronized void put(long userId, long itemId, double value) {
     int bucketIndex = indexForKey(userId, itemId);
     GpuKeyValuePair entry = m_values[bucketIndex];
     if (entry != null) {

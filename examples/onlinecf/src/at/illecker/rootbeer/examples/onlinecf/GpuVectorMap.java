@@ -61,7 +61,7 @@ public final class GpuVectorMap {
     return (entry != null) ? entry.getValue() : null;
   }
 
-  public void put(long key, double[] value) {
+  public synchronized void put(long key, double[] value) {
     m_used = true;
     int bucketIndex = indexForKey(key);
     GpuLongVectorPair entry = m_values[bucketIndex];
@@ -82,7 +82,7 @@ public final class GpuVectorMap {
     }
   }
 
-  public void add(long key, double[] value) {
+  public synchronized void add(long key, double[] value) {
     m_used = true;
     int bucketIndex = indexForKey(key);
     GpuLongVectorPair entry = m_values[bucketIndex];
