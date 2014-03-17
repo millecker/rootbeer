@@ -11,6 +11,7 @@
 	<classpathentry kind="src" path="examples/testmap2/src"/>
 	<classpathentry kind="src" path="examples/testmap3/src"/>
 	<classpathentry kind="src" path="examples/teststringbuilder/src"/>
+	<classpathentry kind="src" path="examples/testsyncblocks/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="rootbeer-develop-branch.jar"/>
 	<classpathentry kind="output" path="bin"/>
