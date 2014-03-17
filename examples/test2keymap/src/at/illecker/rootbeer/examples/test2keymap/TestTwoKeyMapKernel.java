@@ -47,17 +47,6 @@ public class TestTwoKeyMapKernel implements Kernel {
     m_map.put(block_idxx, thread_idxx, value + 1);
   }
 
-  private String arrayToString(double[] arr) {
-    if (arr != null) {
-      String result = "";
-      for (int i = 0; i < arr.length; i++) {
-        result += (i + 1 == arr.length) ? arr[i] : (arr[i] + ",");
-      }
-      return result;
-    }
-    return "null";
-  }
-
   public static void main(String[] args) {
 
     int blockSize = BLOCK_SIZE;
@@ -77,14 +66,20 @@ public class TestTwoKeyMapKernel implements Kernel {
     System.out.println("blockSize: " + blockSize);
     System.out.println("gridSize: " + gridSize);
 
+    boolean isDebugging = ((gridSize < 20) && (blockSize < 20));
+
     // Prepare map
     GpuTwoKeyMap map = new GpuTwoKeyMap(gridSize * blockSize);
-    System.out.println("input: ");
+    if (isDebugging) {
+      System.out.println("input: ");
+    }
     for (int i = 0; i < gridSize; i++) {
       for (int j = 0; j < blockSize; j++) {
         double value = (i * gridSize) + j;
         map.put(i, j, value);
-        System.out.println("(" + i + "," + j + "," + value + ")");
+        if (isDebugging) {
+          System.out.println("(" + i + "," + j + "," + value + ")");
+        }
       }
     }
 
@@ -112,7 +107,9 @@ public class TestTwoKeyMapKernel implements Kernel {
 
     // Verify
     boolean verified = true;
-    System.out.println("output: ");
+    if (isDebugging) {
+      System.out.println("output: ");
+    }
     for (int i = 0; i < gridSize; i++) {
       if (!verified) {
         break;
@@ -120,7 +117,9 @@ public class TestTwoKeyMapKernel implements Kernel {
       for (int j = 0; j < blockSize; j++) {
         double expected_value = (i * gridSize) + j + 1;
         double value = kernel.m_map.get(i, j);
-        System.out.println("(" + i + "," + j + "," + value + ")");
+        if (isDebugging) {
+          System.out.println("(" + i + "," + j + "," + value + ")");
+        }
         if (value != expected_value) {
           verified = false;
           break;
@@ -133,6 +132,6 @@ public class TestTwoKeyMapKernel implements Kernel {
     } else {
       System.out.println("Error in verification!");
     }
-
   }
+
 }
