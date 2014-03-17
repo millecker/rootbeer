@@ -1,0 +1,38 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="TestDoubleArray.jar" />
+		<delete file="TestDoubleArray-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-master-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="TestDoubleArray.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.testdoublearray.TestDoubleArrayKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar TestDoubleArray.jar TestDoubleArray-GPU.jar -noexceptions -64bit</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-master-branch.jar" />
+			<arg value="TestDoubleArray.jar" />
+			<arg value="TestDoubleArray-GPU.jar" />
+			<arg value="-noexceptions" />
+			<arg value="-64bit" />
+		</exec>
+		<echo>java -Xmx4G -jar TestDoubleArray-GPU.jar 1 2</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="TestDoubleArray-GPU.jar" />
+			<arg value="1" />
+			<arg value="2" />
+		</exec>
+	</target>
+</project>
