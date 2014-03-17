@@ -48,7 +48,7 @@ public final class GpuUserItemMap {
     // a >= b ? a * a + a + b : a + b * b; where a, b >= 0
     long val = a >= b ? a * a + a + b : a + b * b;
 
-    return (int) val % m_values.length;
+    return (int) (val % m_values.length);
   }
 
   public Double get(long userId, long itemId) {
