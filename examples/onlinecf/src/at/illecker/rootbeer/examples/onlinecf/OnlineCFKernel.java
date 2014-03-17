@@ -505,6 +505,7 @@ public class OnlineCFKernel implements Kernel {
     int userCount = 3;
     int itemCount = 5;
     String inputFile = "";
+    String separator = "\\t";
 
     // parse arguments
     if ((args.length > 0) && (args.length >= 5)) {
@@ -517,6 +518,9 @@ public class OnlineCFKernel implements Kernel {
       if (args.length > 5) {
         inputFile = args[5];
       }
+      if (args.length > 6) {
+        separator = args[6];
+      }
     } else {
       System.out.println("Wrong argument size!");
       System.out.println("    Argument1=blockSize");
@@ -526,6 +530,8 @@ public class OnlineCFKernel implements Kernel {
       System.out.println("    Argument5=debug(true|false=default)");
       System.out
           .println("    Argument6=inputFile (optional) | MovieLens inputFile");
+      System.out.println("    Argument7=Separator (optional) | default '"
+          + separator + "' ");
       return;
     }
 
@@ -544,6 +550,10 @@ public class OnlineCFKernel implements Kernel {
     System.out.println("gridSize: " + gridSize);
     System.out.println("matrixRank: " + matrixRank);
     System.out.println("maxIterations: " + maxIterations);
+    if (!inputFile.isEmpty()) {
+      System.out.println("inputFile: " + inputFile);
+      System.out.println("separator: '" + separator + "'");
+    }
 
     // Prepare input
     GpuUserItemMap userItemMap = null;
@@ -567,7 +577,7 @@ public class OnlineCFKernel implements Kernel {
         BufferedReader br = new BufferedReader(new FileReader(inputFile));
         String line;
         while ((line = br.readLine()) != null) {
-          String[] values = line.split("\\t");
+          String[] values = line.split(separator);
           long userId = Long.parseLong(values[0]);
           long itemId = Long.parseLong(values[1]);
           double rating = Double.parseDouble(values[2]);

@@ -16,7 +16,11 @@ ant run
   [inputFile=/home/user/Downloads/ml-100k/u.data]
 
 # java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 1 true
-# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 1 false \
-  /home/user/Downloads/ml-100k/u.data
+
+# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 150 false \
+  /home/USERNAME/Downloads/ml-100k/u.data
+
+# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 150 false \
+  /home/USERNAME/Downloads/ml-1m/ratings.dat ::
 
 ###############################################################################
