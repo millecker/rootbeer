@@ -268,9 +268,6 @@ public class OnlineCFKernel implements Kernel {
 
       } // loop over all usersPerBlock
 
-      // Ensure usersMatrix is updated on every block
-      RootbeerGpu.threadfenceSystem();
-
       // Sync all blocks Inter-Block Synchronization
       RootbeerGpu.syncblocks(1);
 
@@ -433,9 +430,6 @@ public class OnlineCFKernel implements Kernel {
         } // if itemVector != null
 
       } // loop over all itemsPerBlock
-
-      // Ensure itemsMatrix is updated on every block
-      RootbeerGpu.threadfenceSystem();
 
       // Sync all blocks Inter-Block Synchronization
       RootbeerGpu.syncblocks(2);
