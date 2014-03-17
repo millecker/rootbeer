@@ -50,6 +50,7 @@ public class TestMapKernel implements Kernel {
       debug(block_idxx, vector);
       for (int i = 0; i < vector.length; i++) {
         RootbeerGpu.setSharedDouble(i * 8, vector[i]);
+        // System.out.println(vector[i]);
       }
     }
     RootbeerGpu.syncthreads();
@@ -71,22 +72,21 @@ public class TestMapKernel implements Kernel {
   }
 
   private synchronized void debug(int val, double[] arr) {
+    int x = arr.length; // ERROR arr.length sets array values to 0
+    /*
     System.out.print("(");
     System.out.print(val);
     System.out.print(",");
-    System.out.print(arrayToString(arr));
-    System.out.println(")");
-  }
-
-  private String arrayToString(double[] arr) {
     if (arr != null) {
-      String result = "";
       for (int i = 0; i < arr.length; i++) {
-        result += (i + 1 == arr.length) ? arr[i] : (arr[i] + ",");
+        System.out.print(Double.toString(arr[i]));
+        if (i + 1 < arr.length) {
+          System.out.print(",");
+        }
       }
-      return result;
     }
-    return "null";
+    System.out.println(")");
+    */
   }
 
   public static void main(String[] args) {
@@ -108,16 +108,22 @@ public class TestMapKernel implements Kernel {
     System.out.println("blockSize: " + blockSize);
     System.out.println("gridSize: " + gridSize);
 
+    boolean isDebugging = ((gridSize < 20) && (blockSize < 20));
+
     // Prepare vectorMap
     GpuVectorMap vectorMap = new GpuVectorMap(gridSize);
-    System.out.println("input: ");
+    if (isDebugging) {
+      System.out.println("input: ");
+    }
     for (int i = 0; i < gridSize; i++) {
       double[] vector = new double[blockSize];
       for (int j = 0; j < blockSize; j++) {
         vector[j] = (i * gridSize) + j;
       }
       vectorMap.put(i, vector);
-      System.out.println("(" + i + "," + Arrays.toString(vector) + ")");
+      if (isDebugging) {
+        System.out.println("(" + i + "," + Arrays.toString(vector) + ")");
+      }
     }
 
     // Run GPU Kernels
@@ -144,13 +150,17 @@ public class TestMapKernel implements Kernel {
 
     // Verify
     boolean verified = true;
-    System.out.println("output: ");
+    if (isDebugging) {
+      System.out.println("output: ");
+    }
     for (int i = 0; i < gridSize; i++) {
       if (!verified) {
         break;
       }
       double[] v = kernel.m_map.get(i);
-      System.out.println("(" + i + "," + Arrays.toString(v) + ")");
+      if (isDebugging) {
+        System.out.println("(" + i + "," + Arrays.toString(v) + ")");
+      }
       for (int j = 0; j < blockSize; j++) {
         double value = v[j];
         double expected_value = (i * gridSize) + j + 1;
@@ -166,6 +176,6 @@ public class TestMapKernel implements Kernel {
     } else {
       System.out.println("Error in verification!");
     }
-
   }
+
 }
