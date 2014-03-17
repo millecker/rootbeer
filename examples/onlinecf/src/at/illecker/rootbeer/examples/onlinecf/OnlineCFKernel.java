@@ -100,6 +100,8 @@ public class OnlineCFKernel implements Kernel {
     if (RootbeerGpu.getThreadId() == 0) {
       System.out.println("blockSize: " + blockSize);
       System.out.println("gridSize: " + gridSize);
+      System.out.println("users(N): " + m_N);
+      System.out.println("items(M): " + m_M);
       System.out.println("usersPerBlock: " + usersPerBlock);
       System.out.println("itemsPerBlock: " + itemsPerBlock);
     }
@@ -666,7 +668,7 @@ public class OnlineCFKernel implements Kernel {
     // Debug users
     if (isDebbuging) {
       System.out.println(usersMap.size() + " users");
-      for (int i = 1; i <= userCount; i++) {
+      for (int i = 1; i <= usersMap.size(); i++) {
         System.out.println("user: " + i + " vector: "
             + Arrays.toString(usersMap.get(i)));
       }
@@ -674,15 +676,16 @@ public class OnlineCFKernel implements Kernel {
     // Debug items
     if (isDebbuging) {
       System.out.println(itemsMap.size() + " items");
-      for (int i = 1; i <= itemCount; i++) {
+      for (int i = 1; i <= itemsMap.size(); i++) {
         System.out.println("item: " + i + " vector: "
             + Arrays.toString(itemsMap.get(i)));
       }
     }
 
     // Run GPU Kernels
+    System.out.println("Run on GPU");
     OnlineCFKernel kernel = new OnlineCFKernel(userItemMap, usersMap, itemsMap,
-        userCount, itemCount, ALPHA, matrixRank, maxIterations);
+        usersMap.size(), itemsMap.size(), ALPHA, matrixRank, maxIterations);
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
@@ -706,7 +709,7 @@ public class OnlineCFKernel implements Kernel {
     // Debug user information
     if (isDebbuging) {
       System.out.println(usersMap.size() + " users");
-      for (int i = 1; i <= userCount; i++) {
+      for (int i = 1; i <= usersMap.size(); i++) {
         System.out.println("user: " + i + " vector: "
             + Arrays.toString(usersMap.get(i)));
       }
@@ -714,7 +717,7 @@ public class OnlineCFKernel implements Kernel {
     // Debug item information
     if (isDebbuging) {
       System.out.println(itemsMap.size() + " items");
-      for (int i = 1; i <= itemCount; i++) {
+      for (int i = 1; i <= itemsMap.size(); i++) {
         System.out.println("item: " + i + " vector: "
             + Arrays.toString(itemsMap.get(i)));
       }

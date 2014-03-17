@@ -13,14 +13,15 @@ ant run
 # Run GPU Kernel
 # java -Xmx4G -jar OnlineCF-GPU.jar \
   [blockSize=256 gridSize=14 matrixRank=3 maxIterations=1 debug=false]
-  [inputFile=/home/user/Downloads/ml-100k/u.data]
+  [inputFile=/home/USERNAME/Downloads/ml-100k/u.data]
+  [separator=::]
 
 # java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 1 true
 
-# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 150 false \
+# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 1 false \
   /home/USERNAME/Downloads/ml-100k/u.data
 
-# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 150 false \
+# java -Xmx4G -jar OnlineCF-GPU.jar 256 14 3 1 false \
   /home/USERNAME/Downloads/ml-1m/ratings.dat ::
 
 # java -Xmx8G -jar OnlineCF-GPU.jar 256 14 3 1 false \
