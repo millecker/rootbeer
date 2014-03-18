@@ -457,25 +457,25 @@ public class OnlineCFKernel implements Kernel {
     return "null";
   }
 
-  public static GpuUserItemMap getUserItemMap() {
-    GpuUserItemMap userItemMap = new GpuUserItemMap(13);
-    userItemMap.put(1, 1, 4);
-    userItemMap.put(1, 2, 2.5);
-    userItemMap.put(1, 3, 3.5);
-    userItemMap.put(1, 4, 1);
-    userItemMap.put(1, 5, 3.5);
+  public static List<double[]> getUserItems() {
+    List<double[]> userItems = new ArrayList<double[]>();
+    userItems.add(new double[] { 1, 1, 4 });
+    userItems.add(new double[] { 1, 2, 2.5 });
+    userItems.add(new double[] { 1, 3, 3.5 });
+    userItems.add(new double[] { 1, 4, 1 });
+    userItems.add(new double[] { 1, 5, 3.5 });
 
-    userItemMap.put(2, 1, 4);
-    userItemMap.put(2, 2, 2.5);
-    userItemMap.put(2, 3, 3.5);
-    userItemMap.put(2, 4, 1);
-    userItemMap.put(2, 5, 3.5);
+    userItems.add(new double[] { 2, 1, 4 });
+    userItems.add(new double[] { 2, 2, 2.5 });
+    userItems.add(new double[] { 2, 3, 3.5 });
+    userItems.add(new double[] { 2, 4, 1 });
+    userItems.add(new double[] { 2, 5, 3.5 });
 
-    userItemMap.put(3, 1, 4);
-    userItemMap.put(3, 2, 2.5);
-    userItemMap.put(3, 3, 3.5);
+    userItems.add(new double[] { 3, 1, 4 });
+    userItems.add(new double[] { 3, 2, 2.5 });
+    userItems.add(new double[] { 3, 3, 3.5 });
 
-    return userItemMap;
+    return userItems;
   }
 
   public static double[] getRandomArray(Random rand, int size) {
@@ -486,9 +486,10 @@ public class OnlineCFKernel implements Kernel {
     return arr;
   }
 
-  public static GpuVectorMap getVectorMap(Random rand, int size, int matrixRank) {
-    GpuVectorMap vectorMap = new GpuVectorMap(size);
-    for (int i = 1; i <= size; i++) {
+  public static HashMap<Long, double[]> getVectorMap(Random rand, int size,
+      int matrixRank) {
+    HashMap<Long, double[]> vectorMap = new HashMap<Long, double[]>(size);
+    for (long i = 1; i <= size; i++) {
       vectorMap.put(i, getRandomArray(rand, matrixRank));
     }
     return vectorMap;
@@ -504,10 +505,9 @@ public class OnlineCFKernel implements Kernel {
     final double ALPHA = 0.01;
     int matrixRank = 3;
     int maxIterations = 1;
-    int userCount = 3;
-    int itemCount = 5;
     String inputFile = "";
     String separator = "\\t";
+    boolean useCPU = false;
 
     // parse arguments
     if ((args.length > 0) && (args.length >= 5)) {
@@ -518,10 +518,13 @@ public class OnlineCFKernel implements Kernel {
       isDebbuging = Boolean.parseBoolean(args[4]);
       // optional parameters
       if (args.length > 5) {
-        inputFile = args[5];
+        useCPU = Boolean.parseBoolean(args[5]);
       }
       if (args.length > 6) {
-        separator = args[6];
+        inputFile = args[6];
+      }
+      if (args.length > 7) {
+        separator = args[7];
       }
     } else {
       System.out.println("Wrong argument size!");
@@ -530,9 +533,11 @@ public class OnlineCFKernel implements Kernel {
       System.out.println("    Argument3=matrixRank");
       System.out.println("    Argument4=maxIterations");
       System.out.println("    Argument5=debug(true|false=default)");
+      System.out.println("    Argument6=useCPU (optional) | default (" + useCPU
+          + ")");
       System.out
-          .println("    Argument6=inputFile (optional) | MovieLens inputFile");
-      System.out.println("    Argument7=Separator (optional) | default '"
+          .println("    Argument7=inputFile (optional) | MovieLens inputFile");
+      System.out.println("    Argument8=Separator (optional) | default '"
           + separator + "' ");
       return;
     }
@@ -543,13 +548,17 @@ public class OnlineCFKernel implements Kernel {
       return;
     }
 
-    if (blockSize < matrixRank) {
+    if ((!useCPU) && (blockSize < matrixRank)) {
       System.err.println("blockSize < matrixRank");
       return;
     }
 
-    System.out.println("blockSize: " + blockSize);
-    System.out.println("gridSize: " + gridSize);
+    // Debug output
+    System.out.println("useCPU: " + useCPU);
+    if (!useCPU) {
+      System.out.println("blockSize: " + blockSize);
+      System.out.println("gridSize: " + gridSize);
+    }
     System.out.println("matrixRank: " + matrixRank);
     System.out.println("maxIterations: " + maxIterations);
     if (!inputFile.isEmpty()) {
@@ -558,21 +567,21 @@ public class OnlineCFKernel implements Kernel {
     }
 
     // Prepare input
-    GpuUserItemMap userItemMap = null;
-    GpuVectorMap usersMap = null;
-    GpuVectorMap itemsMap = null;
+    List<double[]> preferences = null;
+    HashMap<Long, double[]> usersMatrix = null;
+    HashMap<Long, double[]> itemsMatrix = null;
 
     if (inputFile.isEmpty()) { // no inputFile
 
-      userItemMap = getUserItemMap();
-      usersMap = getVectorMap(rand, userCount, matrixRank);
-      itemsMap = getVectorMap(rand, itemCount, matrixRank);
+      preferences = getUserItems();
+      usersMatrix = getVectorMap(rand, 3, matrixRank);
+      itemsMatrix = getVectorMap(rand, 5, matrixRank);
 
     } else { // parse inputFile
 
-      List<double[]> preferences = new ArrayList<double[]>();
-      HashMap<Long, double[]> usersMatrix = new HashMap<Long, double[]>();
-      HashMap<Long, double[]> itemsMatrix = new HashMap<Long, double[]>();
+      preferences = new ArrayList<double[]>();
+      usersMatrix = new HashMap<Long, double[]>();
+      itemsMatrix = new HashMap<Long, double[]>();
 
       try {
 
@@ -618,9 +627,12 @@ public class OnlineCFKernel implements Kernel {
       } catch (IOException e) {
         e.printStackTrace();
       }
+    }
+
+    if (!useCPU) {
 
       // Convert preferences to UserItemMap
-      userItemMap = new GpuUserItemMap(preferences.size());
+      GpuUserItemMap userItemMap = new GpuUserItemMap(preferences.size());
       System.out.println("userItemMap: length: " + preferences.size());
       for (double[] v : preferences) {
         userItemMap.put((long) v[0], (long) v[1], v[2]);
@@ -631,7 +643,7 @@ public class OnlineCFKernel implements Kernel {
       }
 
       // Convert usersMatrix to GpuVectorMap
-      usersMap = new GpuVectorMap(usersMatrix.size());
+      GpuVectorMap usersMap = new GpuVectorMap(usersMatrix.size());
       System.out.println("usersMap: length: " + usersMatrix.size());
       Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
           .iterator();
@@ -648,7 +660,7 @@ public class OnlineCFKernel implements Kernel {
       }
 
       // Convert itemsMatrix to GpuVectorMap
-      itemsMap = new GpuVectorMap(itemsMatrix.size());
+      GpuVectorMap itemsMap = new GpuVectorMap(itemsMatrix.size());
       System.out.println("itemsMap: length: " + itemsMatrix.size());
       Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
           .iterator();
@@ -663,65 +675,123 @@ public class OnlineCFKernel implements Kernel {
               + Arrays.toString(vector));
         }
       }
-    }
 
-    // Debug users
-    if (isDebbuging) {
-      System.out.println(usersMap.size() + " users");
-      for (int i = 1; i <= usersMap.size(); i++) {
-        System.out.println("user: " + i + " vector: "
-            + Arrays.toString(usersMap.get(i)));
+      // Run GPU Kernels
+      System.out.println("Run on GPU");
+      OnlineCFKernel kernel = new OnlineCFKernel(userItemMap, usersMap,
+          itemsMap, usersMap.size(), itemsMap.size(), ALPHA, matrixRank,
+          maxIterations);
+
+      Rootbeer rootbeer = new Rootbeer();
+      Context context = rootbeer.createDefaultContext();
+      Stopwatch watch = new Stopwatch();
+      watch.start();
+      rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
+          * gridSize), context);
+      watch.stop();
+
+      List<StatsRow> stats = context.getStats();
+      for (StatsRow row : stats) {
+        System.out.println("  StatsRow:");
+        System.out.println("    serial time: " + row.getSerializationTime());
+        System.out.println("    exec time: " + row.getExecutionTime());
+        System.out
+            .println("    deserial time: " + row.getDeserializationTime());
+        System.out.println("    num blocks: " + row.getNumBlocks());
+        System.out.println("    num threads: " + row.getNumThreads());
+        System.out.println("GPUTime: " + watch.elapsedTimeMillis() + " ms");
       }
-    }
-    // Debug items
-    if (isDebbuging) {
-      System.out.println(itemsMap.size() + " items");
-      for (int i = 1; i <= itemsMap.size(); i++) {
-        System.out.println("item: " + i + " vector: "
-            + Arrays.toString(itemsMap.get(i)));
+
+      // Debug users
+      if (isDebbuging) {
+        System.out.println(usersMap.size() + " users");
+        for (int i = 1; i <= usersMap.size(); i++) {
+          System.out.println("user: " + i + " vector: "
+              + Arrays.toString(usersMap.get(i)));
+        }
       }
-    }
-
-    // Run GPU Kernels
-    System.out.println("Run on GPU");
-    OnlineCFKernel kernel = new OnlineCFKernel(userItemMap, usersMap, itemsMap,
-        usersMap.size(), itemsMap.size(), ALPHA, matrixRank, maxIterations);
-
-    Rootbeer rootbeer = new Rootbeer();
-    Context context = rootbeer.createDefaultContext();
-    Stopwatch watch = new Stopwatch();
-    watch.start();
-    rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
-        * gridSize), context);
-    watch.stop();
-
-    List<StatsRow> stats = context.getStats();
-    for (StatsRow row : stats) {
-      System.out.println("  StatsRow:");
-      System.out.println("    serial time: " + row.getSerializationTime());
-      System.out.println("    exec time: " + row.getExecutionTime());
-      System.out.println("    deserial time: " + row.getDeserializationTime());
-      System.out.println("    num blocks: " + row.getNumBlocks());
-      System.out.println("    num threads: " + row.getNumThreads());
-      System.out.println("GPUTime: " + watch.elapsedTimeMillis() + " ms");
-    }
-
-    // Debug user information
-    if (isDebbuging) {
-      System.out.println(usersMap.size() + " users");
-      for (int i = 1; i <= usersMap.size(); i++) {
-        System.out.println("user: " + i + " vector: "
-            + Arrays.toString(usersMap.get(i)));
+      // Debug items
+      if (isDebbuging) {
+        System.out.println(itemsMap.size() + " items");
+        for (int i = 1; i <= itemsMap.size(); i++) {
+          System.out.println("item: " + i + " vector: "
+              + Arrays.toString(itemsMap.get(i)));
+        }
       }
-    }
-    // Debug item information
-    if (isDebbuging) {
-      System.out.println(itemsMap.size() + " items");
-      for (int i = 1; i <= itemsMap.size(); i++) {
-        System.out.println("item: " + i + " vector: "
-            + Arrays.toString(itemsMap.get(i)));
+
+    } else { // run on CPU
+
+      // Debug input
+      System.out.println("preferences: length: " + preferences.size());
+      if (isDebbuging) {
+        for (double[] v : preferences) {
+          System.out.println("preferences userId: '" + v[0] + "' itemId: '"
+              + v[1] + "' value: '" + v[2]);
+        }
+      }
+      System.out.println("usersMatrix: length: " + usersMatrix.size());
+      if (isDebbuging) {
+        Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
+            .iterator();
+        while (userIt.hasNext()) {
+          Entry<Long, double[]> entry = userIt.next();
+          long userId = entry.getKey();
+          double[] vector = entry.getValue();
+          System.out.println("usersMatrix userId: '" + userId + " value: '"
+              + Arrays.toString(vector));
+
+        }
+      }
+      System.out.println("itemsMatrix: length: " + itemsMatrix.size());
+      if (isDebbuging) {
+        Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
+            .iterator();
+        while (itemIt.hasNext()) {
+          Entry<Long, double[]> entry = itemIt.next();
+          long itemId = entry.getKey();
+          double[] vector = entry.getValue();
+          System.out.println("itemsMatrix itemId: '" + itemId + " value: '"
+              + Arrays.toString(vector));
+        }
+      }
+
+      // Run CPU
+      System.out.println("Run on CPU");
+      OnlineCF onlineCF = new OnlineCF(preferences, usersMatrix, itemsMatrix,
+          ALPHA, matrixRank, maxIterations);
+
+      long startTime = System.currentTimeMillis();
+      onlineCF.compute();
+      long endTime = System.currentTimeMillis() - startTime;
+      System.out.println("GPUTime: " + endTime + " ms");
+
+      // Debug output
+      if (isDebbuging) {
+        System.out.println(onlineCF.m_usersMatrix.size() + " users");
+        Iterator<Entry<Long, double[]>> userIt = onlineCF.m_usersMatrix
+            .entrySet().iterator();
+        while (userIt.hasNext()) {
+          Entry<Long, double[]> entry = userIt.next();
+          long userId = entry.getKey();
+          double[] vector = entry.getValue();
+          System.out.println("usersMatrix userId: '" + userId + " value: '"
+              + Arrays.toString(vector));
+
+        }
+
+        System.out.println(onlineCF.m_itemsMatrix.size() + " items");
+        Iterator<Entry<Long, double[]>> itemIt = onlineCF.m_itemsMatrix
+            .entrySet().iterator();
+        while (itemIt.hasNext()) {
+          Entry<Long, double[]> entry = itemIt.next();
+          long itemId = entry.getKey();
+          double[] vector = entry.getValue();
+          System.out.println("itemsMatrix itemId: '" + itemId + " value: '"
+              + Arrays.toString(vector));
+        }
       }
     }
 
   }
+
 }
