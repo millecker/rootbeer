@@ -707,7 +707,7 @@ public class OnlineCFKernel implements Kernel {
         System.out.println(usersMap.size() + " users");
         for (int i = 1; i <= usersMap.size(); i++) {
           System.out.println("user: " + i + " vector: "
-              + Arrays.toString(usersMap.get(i)));
+              + Arrays.toString(kernel.m_usersMatrix.get(i)));
         }
       }
       // Debug items
@@ -715,7 +715,7 @@ public class OnlineCFKernel implements Kernel {
         System.out.println(itemsMap.size() + " items");
         for (int i = 1; i <= itemsMap.size(); i++) {
           System.out.println("item: " + i + " vector: "
-              + Arrays.toString(itemsMap.get(i)));
+              + Arrays.toString(kernel.m_itemsMatrix.get(i)));
         }
       }
 
