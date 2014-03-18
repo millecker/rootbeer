@@ -1,0 +1,41 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="OnlineCF2.jar" />
+		<delete file="OnlineCF2-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="OnlineCF2.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.onlinecf2.OnlineCFKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF2.jar OnlineCF2-GPU.jar -64bit -noexceptions</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="OnlineCF2.jar" />
+			<arg value="OnlineCF2-GPU.jar" />
+			<arg value="-64bit" />
+			<arg value="-noexceptions" />
+		</exec>
+		<echo>java -Xmx4G -jar OnlineCF2-GPU.jar 256 14 3 1 true</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="OnlineCF2-GPU.jar" />
+			<arg value="256" />
+			<arg value="14" />
+			<arg value="3" />
+			<arg value="1" />
+			<arg value="true" />
+		</exec>
+	</target>
+</project>
