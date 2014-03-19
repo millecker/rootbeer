@@ -1,0 +1,35 @@
+###############################################################################
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_20
+
+ptxas info    : 239 bytes gmem, 136 bytes cmem[14]
+
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_i' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_i
+    88 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 53 registers, 40984 bytes smem, 108 bytes cmem[0], 104 bytes cmem[16]
+
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
+    96 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 53 registers, 40984 bytes smem, 116 bytes cmem[0], 104 bytes cmem[16]
+
+###############################################################################
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_20 -maxrregcount 48
+
+ptxas info    : 239 bytes gmem, 136 bytes cmem[14]
+
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_i' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_i
+    96 bytes stack frame, 8 bytes spill stores, 16 bytes spill loads
+ptxas info    : Used 48 registers, 40984 bytes smem, 108 bytes cmem[0], 104 bytes cmem[16]
+
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
+    104 bytes stack frame, 8 bytes spill stores, 16 bytes spill loads
+ptxas info    : Used 48 registers, 40984 bytes smem, 116 bytes cmem[0], 104 bytes cmem[16]
+
+###############################################################################
+
+

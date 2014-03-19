@@ -740,8 +740,13 @@ public class OnlineCFKernel implements Kernel {
           colId++;
         }
         if ((isDebbuging) && (rowId < debugLines)) {
-          System.out.println("userItemMatrix userId: " + userId + " row["
-              + rowId + "]: " + Arrays.toString(userItemMatrix[rowId]));
+          System.out.println("userItemMatrix userId: "
+              + userId
+              + " row["
+              + rowId
+              + "]: "
+              + Arrays.toString(Arrays.copyOfRange(userItemMatrix[rowId], 0,
+                  Math.min(itemsMatrix.size(), debugLines))));
         }
         rowId++;
       }
@@ -801,7 +806,7 @@ public class OnlineCFKernel implements Kernel {
             .println("    deserial time: " + row.getDeserializationTime());
         System.out.println("    num blocks: " + row.getNumBlocks());
         System.out.println("    num threads: " + row.getNumThreads());
-        System.out.println("GPUTime: " + watch.elapsedTimeMillis() + " ms");
+        System.out.println("GPU Time: " + watch.elapsedTimeMillis() + " ms");
       }
 
       // Debug users
@@ -866,7 +871,7 @@ public class OnlineCFKernel implements Kernel {
       long startTime = System.currentTimeMillis();
       onlineCF.compute();
       long endTime = System.currentTimeMillis() - startTime;
-      System.out.println("GPUTime: " + endTime + " ms");
+      System.out.println("CPU Time: " + endTime + " ms");
 
       // Debug output
       if (isDebbuging) {
