@@ -23,14 +23,16 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
-import java.util.TreeMap;
 
 import org.trifort.rootbeer.runtime.Context;
 import org.trifort.rootbeer.runtime.Kernel;
@@ -445,9 +447,9 @@ public class OnlineCFKernel implements Kernel {
 
   public static List<double[]> getUserItems() {
     List<double[]> userItems = new ArrayList<double[]>();
-    userItems.add(new double[] { 3, 1, 4 });
-    userItems.add(new double[] { 3, 2, 2.5 });
-    userItems.add(new double[] { 3, 3, 3.5 });
+    userItems.add(new double[] { 1, 1, 4 });
+    userItems.add(new double[] { 1, 2, 2.5 });
+    userItems.add(new double[] { 1, 3, 3.5 });
 
     userItems.add(new double[] { 2, 1, 4 });
     userItems.add(new double[] { 2, 2, 2.5 });
@@ -455,11 +457,11 @@ public class OnlineCFKernel implements Kernel {
     userItems.add(new double[] { 2, 4, 1 });
     userItems.add(new double[] { 2, 5, 3.5 });
 
-    userItems.add(new double[] { 1, 1, 4 });
-    userItems.add(new double[] { 1, 2, 2.5 });
-    userItems.add(new double[] { 1, 3, 3.5 });
-    userItems.add(new double[] { 1, 4, 1 });
-    userItems.add(new double[] { 1, 5, 3.5 });
+    userItems.add(new double[] { 3, 1, 4 });
+    userItems.add(new double[] { 3, 2, 2.5 });
+    userItems.add(new double[] { 3, 3, 3.5 });
+    userItems.add(new double[] { 3, 4, 1 });
+    userItems.add(new double[] { 3, 5, 3.5 });
 
     return userItems;
   }
@@ -481,11 +483,51 @@ public class OnlineCFKernel implements Kernel {
     return vectorMap;
   }
 
+  public static <K extends Comparable, V extends Comparable> Map<K, V> sortByKeys(
+      Map<K, V> map) {
+
+    List<K> keys = new LinkedList<K>(map.keySet());
+    Collections.sort(keys);
+
+    // LinkedHashMap will keep the keys in the order they are inserted
+    // which is currently sorted on natural ordering
+    Map<K, V> sortedMap = new LinkedHashMap<K, V>();
+    for (K key : keys) {
+      sortedMap.put(key, map.get(key));
+    }
+
+    return sortedMap;
+  }
+
+  public static <K extends Comparable, V extends Comparable> Map<K, V> sortByValues(
+      Map<K, V> map) {
+
+    List<Map.Entry<K, V>> entries = new LinkedList<Map.Entry<K, V>>(
+        map.entrySet());
+
+    Collections.sort(entries, new Comparator<Map.Entry<K, V>>() {
+      @Override
+      public int compare(Entry<K, V> o1, Entry<K, V> o2) {
+        return o2.getValue().compareTo(o1.getValue());
+      }
+    });
+
+    // LinkedHashMap will keep the keys in the order they are inserted
+    // which is currently sorted on natural ordering
+    Map<K, V> sortedMap = new LinkedHashMap<K, V>();
+    for (Map.Entry<K, V> entry : entries) {
+      sortedMap.put(entry.getKey(), entry.getValue());
+    }
+
+    return sortedMap;
+  }
+
   public static void main(String[] args) {
 
     int blockSize = 256;
     int gridSize = 14;
     boolean isDebbuging = false;
+    int debugLines = 10;
     Random rand = new Random(32L);
 
     final double ALPHA = 0.01;
@@ -672,95 +714,68 @@ public class OnlineCFKernel implements Kernel {
 
     if (!useCPU) {
 
-      class ValueComparator implements Comparator<Long> {
-        Map<Long, Long> base;
-
-        public ValueComparator(Map<Long, Long> base) {
-          this.base = base;
-        }
-
-        // Note: this comparator imposes orderings that are inconsistent with
-        // equals.
-        public int compare(Long a, Long b) {
-          if (base.get(a) >= base.get(b)) {
-            return -1;
-          } else {
-            return 1;
-          } // returning 0 would merge keys
-        }
-      }
-
-      TreeMap<Long, Long> sortedUserRatingCount = new TreeMap<Long, Long>(
-          new ValueComparator(userRatingCount));
-      TreeMap<Long, Long> sortedItemRatingCount = new TreeMap<Long, Long>(
-          new ValueComparator(itemRatingCount));
-      System.out.println("userRatings: " + userRatingCount.keySet());
-      System.out
-          .println("sortedUserRatings: " + sortedUserRatingCount.keySet());
-      System.out.println("itemRatings: " + itemRatingCount.keySet());
-      System.out
-          .println("sortedItemRatings: " + sortedItemRatingCount.keySet());
-
-      HashMap<Integer, Long> userRowMap = new HashMap<Integer, Long>(
-          usersMatrix.size());
-      HashMap<Integer, Long> itemRowMap = new HashMap<Integer, Long>(
-          itemsMatrix.size());
+      Map<Long, Long> sortedUserRatingCount = sortByValues(userRatingCount);
+      Map<Long, Long> sortedItemRatingCount = sortByValues(itemRatingCount);
 
       // Convert preferences to double[][]
       double[][] userItemMatrix = new double[usersMatrix.size()][itemsMatrix
           .size()];
+      Map<Integer, Long> userItemMatrixUserRowMap = new HashMap<Integer, Long>();
+      Map<Integer, Long> userItemMatrixItemColMap = new HashMap<Integer, Long>();
+
       System.out.println("userItemMatrix: (m x n): " + usersMatrix.size()
           + " x " + itemsMatrix.size());
       int rowId = 0;
       for (Long userId : sortedUserRatingCount.keySet()) {
-        userRowMap.put(rowId, userId);
+        userItemMatrixUserRowMap.put(rowId, userId);
         int colId = 0;
         for (Long itemId : sortedItemRatingCount.keySet()) {
-          itemRowMap.put(colId, itemId);
-          userItemMatrix[rowId][colId] = preferencesMap.get(userId).get(itemId);
+          if (rowId == 0) {
+            userItemMatrixItemColMap.put(colId, itemId);
+          }
+          if (preferencesMap.get(userId).containsKey(itemId)) {
+            userItemMatrix[rowId][colId] = preferencesMap.get(userId).get(
+                itemId);
+          }
           colId++;
         }
-        if /* isDebbuging */(rowId < 10) {
-          System.out.println("userItemMatrix row[" + rowId + "]: "
-              + Arrays.toString(userItemMatrix[rowId]));
+        if ((isDebbuging) && (rowId < debugLines)) {
+          System.out.println("userItemMatrix userId: " + userId + " row["
+              + rowId + "]: " + Arrays.toString(userItemMatrix[rowId]));
         }
         rowId++;
       }
 
       // Convert usersMatrix to double[][]
-      double[][] userMatrix = new double[usersMatrix.size() + 1][matrixRank];
+      double[][] userMatrix = new double[usersMatrix.size()][matrixRank];
       System.out.println("userMatrix: length: " + usersMatrix.size());
-      Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
-          .iterator();
-      while (userIt.hasNext()) {
-        Entry<Long, double[]> entry = userIt.next();
-        int userId = entry.getKey().intValue();
-        double[] vector = entry.getValue();
+      rowId = 0;
+      for (Long userId : sortedUserRatingCount.keySet()) {
+        double[] vector = usersMatrix.get(userId);
         for (int i = 0; i < matrixRank; i++) {
-          userMatrix[userId][i] = vector[i];
+          userMatrix[rowId][i] = vector[i];
         }
-        if (isDebbuging) {
-          System.out.println("userMatrix userId: '" + userId + " value: '"
+        if ((isDebbuging) && (rowId < debugLines)) {
+          System.out.println("userMatrix userId: " + userId + " "
               + Arrays.toString(vector));
         }
+        rowId++;
       }
 
       // Convert itemsMatrix to double[][]
-      double[][] itemMatrix = new double[itemsMatrix.size() + 1][matrixRank];
+      double[][] itemMatrix = new double[itemsMatrix.size()][matrixRank];
       System.out.println("itemMatrix: length: " + itemsMatrix.size());
-      Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
-          .iterator();
-      while (itemIt.hasNext()) {
-        Entry<Long, double[]> entry = itemIt.next();
-        int itemId = entry.getKey().intValue();
-        double[] vector = entry.getValue();
+      rowId = 0;
+      for (Long itemId : sortedItemRatingCount.keySet()) {
+        double[] vector = itemsMatrix.get(itemId);
         for (int i = 0; i < matrixRank; i++) {
-          itemMatrix[itemId][i] = vector[i];
+          itemMatrix[rowId][i] = vector[i];
         }
-        if (isDebbuging) {
-          System.out.println("itemMatrix itemId: '" + itemId + " value: '"
+        if ((isDebbuging) && (rowId < debugLines)) {
+          System.out.println("itemMatrix itemId: " + itemId + " "
               + Arrays.toString(vector));
         }
+        rowId++;
       }
 
       // Run GPU Kernels
@@ -792,16 +807,16 @@ public class OnlineCFKernel implements Kernel {
       // Debug users
       if (isDebbuging) {
         System.out.println(usersMatrix.size() + " users");
-        for (int i = 1; i <= usersMatrix.size(); i++) {
-          System.out.println("user: " + i + " vector: "
+        for (int i = 0; i < Math.min(usersMatrix.size(), debugLines); i++) {
+          System.out.println("userId: " + userItemMatrixUserRowMap.get(i) + " "
               + Arrays.toString(kernel.m_usersMatrix[i]));
         }
       }
       // Debug items
       if (isDebbuging) {
         System.out.println(itemsMatrix.size() + " items");
-        for (int i = 1; i <= itemsMatrix.size(); i++) {
-          System.out.println("item: " + i + " vector: "
+        for (int i = 0; i < Math.min(itemsMatrix.size(), debugLines); i++) {
+          System.out.println("itemId: " + userItemMatrixItemColMap.get(i) + " "
               + Arrays.toString(kernel.m_itemsMatrix[i]));
         }
       }
@@ -811,9 +826,10 @@ public class OnlineCFKernel implements Kernel {
       // Debug input
       System.out.println("preferences: length: " + preferences.size());
       if (isDebbuging) {
-        for (double[] v : preferences) {
-          System.out.println("preferences userId: '" + v[0] + "' itemId: '"
-              + v[1] + "' value: '" + v[2]);
+        for (int i = 0; i < Math.min(preferences.size(), debugLines); i++) {
+          System.out.println("preferences userId: '" + preferences.get(i)[0]
+              + "' itemId: '" + preferences.get(i)[1] + "' value: '"
+              + preferences.get(i)[2]);
         }
       }
       System.out.println("usersMatrix: length: " + usersMatrix.size());
