@@ -4,6 +4,7 @@
 	<classpathentry kind="src" path="examples/matrixmultiplication2/src"/>
 	<classpathentry kind="src" path="examples/onlinecf/src"/>
 	<classpathentry kind="src" path="examples/onlinecf2/src"/>
+	<classpathentry kind="src" path="examples/onlinecf3/src"/>
 	<classpathentry kind="src" path="examples/piestimator/src"/>
 	<classpathentry kind="src" path="examples/test2keymap/src"/>
 	<classpathentry kind="src" path="examples/testdoublearray/src"/>
