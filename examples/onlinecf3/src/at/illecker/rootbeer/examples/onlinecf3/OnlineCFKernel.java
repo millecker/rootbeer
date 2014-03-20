@@ -86,9 +86,9 @@ public class OnlineCFKernel implements Kernel {
     int usersPerBlock = divup(m_N, gridSize);
     int itemsPerBlock = divup(m_M, gridSize);
 
-    // SharedMemory per block
+    // SharedMemory per block (max 12 + 1024 * 8 = 8204 bytes)
     int shmStartPos = 0;
-    // userVector: matrixRank x Doubles (m_matrixRank * 8 bytes)
+    // multVector: matrixRank x Doubles (m_matrixRank * 8 bytes)
     int shmMultVectorStartPos = shmStartPos;
 
     // DEBUG
@@ -672,27 +672,30 @@ public class OnlineCFKernel implements Kernel {
       }
       System.out.println("usersMatrix: length: " + usersMatrix.size());
       if (isDebbuging) {
+        int i = 0;
         Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
             .iterator();
-        while (userIt.hasNext()) {
+        while ((userIt.hasNext()) && (i < debugLines)) {
           Entry<Long, double[]> entry = userIt.next();
           long userId = entry.getKey();
           double[] vector = entry.getValue();
           System.out.println("usersMatrix userId: '" + userId + " value: '"
               + Arrays.toString(vector));
-
+          i++;
         }
       }
       System.out.println("itemsMatrix: length: " + itemsMatrix.size());
       if (isDebbuging) {
+        int i = 0;
         Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
             .iterator();
-        while (itemIt.hasNext()) {
+        while ((itemIt.hasNext()) && (i < debugLines)) {
           Entry<Long, double[]> entry = itemIt.next();
           long itemId = entry.getKey();
           double[] vector = entry.getValue();
           System.out.println("itemsMatrix itemId: '" + itemId + " value: '"
               + Arrays.toString(vector));
+          i++;
         }
       }
 
@@ -709,26 +712,29 @@ public class OnlineCFKernel implements Kernel {
       // Debug output
       if (isDebbuging) {
         System.out.println(onlineCF.m_usersMatrix.size() + " users");
+        int i = 0;
         Iterator<Entry<Long, double[]>> userIt = onlineCF.m_usersMatrix
             .entrySet().iterator();
-        while (userIt.hasNext()) {
+        while ((userIt.hasNext()) && (i < debugLines)) {
           Entry<Long, double[]> entry = userIt.next();
           long userId = entry.getKey();
           double[] vector = entry.getValue();
           System.out.println("usersMatrix userId: '" + userId + " value: '"
               + Arrays.toString(vector));
-
+          i++;
         }
 
         System.out.println(onlineCF.m_itemsMatrix.size() + " items");
+        i = 0;
         Iterator<Entry<Long, double[]>> itemIt = onlineCF.m_itemsMatrix
             .entrySet().iterator();
-        while (itemIt.hasNext()) {
+        while ((itemIt.hasNext()) && (i < debugLines)) {
           Entry<Long, double[]> entry = itemIt.next();
           long itemId = entry.getKey();
           double[] vector = entry.getValue();
           System.out.println("itemsMatrix itemId: '" + itemId + " value: '"
               + Arrays.toString(vector));
+          i++;
         }
       }
     }
