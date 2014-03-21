@@ -1,35 +1,76 @@
-###############################################################################
+#############################################################################################
+1) OnlineCF3
+#############################################################################################
+
+BlockSize: 256
+SharedMemory: 12 + 256 * 8 = 2060 bytes
+a) Registers: 48 (136 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads)
+b) Registers: -maxrregcount 40 (144 bytes stack frame, 20 bytes spill stores, 364 bytes spill loads)
+c) Registers: -maxrregcount 32 (168 bytes stack frame, 636 bytes spill stores, 284 bytes spill loads)
+
+#############################################################################################
+
+#) without any configuration
+$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF3.jar OnlineCF3-GPU.jar -64bit -noexceptions -noarraychecks
+$ java -Xmx4G -jar OnlineCF3-GPU.jar 256 14 256 10 false false /home/martin/Downloads/ml-1m/ratings.dat ::
+  StatsRow:
+    serial time: 122
+    exec time: 3304
+    deserial time: 69
+    num blocks: 14
+    num threads: 256
+GPU Time: 3503 ms
+
+#############################################################################################
+
+a) Registers: 48
+$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF3.jar OnlineCF3-GPU.jar \
+   -64bit -noexceptions -noarraychecks -maxrregcount 48 -shared-mem-size 2060
+$ java -Xmx4G -jar OnlineCF3-GPU.jar 256 14 256 10 false false /home/martin/Downloads/ml-1m/ratings.dat ::
+  StatsRow:
+    serial time: 115
+    exec time: 3297
+    deserial time: 72
+    num blocks: 14
+    num threads: 256
+GPU Time: 3493 ms
+
+#############################################################################################
+
+b) Registers: 40
+$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF3.jar OnlineCF3-GPU.jar \
+   -64bit -noexceptions -noarraychecks -maxrregcount 40 -shared-mem-size 2060
+$ java -Xmx4G -jar OnlineCF3-GPU.jar 256 14 256 10 false false /home/martin/Downloads/ml-1m/ratings.dat ::
+  StatsRow:
+    serial time: 115
+    exec time: 3309
+    deserial time: 75
+    num blocks: 14
+    num threads: 256
+GPU Time: 3512 ms
+
+#############################################################################################
+
+c) Registers: 32
+$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF3.jar OnlineCF3-GPU.jar \
+   -64bit -noexceptions -noarraychecks -maxrregcount 32 -shared-mem-size 2060
+$ java -Xmx4G -jar OnlineCF3-GPU.jar 256 14 256 10 false false /home/martin/Downloads/ml-1m/ratings.dat ::
+  StatsRow:
+    serial time: 115
+    exec time: 3312
+    deserial time: 69
+    num blocks: 14
+    num threads: 256
+GPU Time: 3504 ms
+
+#############################################################################################
 
 $ nvcc generated.cu --ptxas-options=-v -arch sm_20
 
-ptxas info    : 239 bytes gmem, 136 bytes cmem[14]
-
-ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_i' for 'sm_20'
-ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_i
-    88 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-ptxas info    : Used 53 registers, 40984 bytes smem, 108 bytes cmem[0], 104 bytes cmem[16]
-
+ptxas info    : 243 bytes gmem, 144 bytes cmem[14]
 ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_20'
 ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
-    96 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-ptxas info    : Used 53 registers, 40984 bytes smem, 116 bytes cmem[0], 104 bytes cmem[16]
-
-###############################################################################
-
-$ nvcc generated.cu --ptxas-options=-v -arch sm_20 -maxrregcount 48
-
-ptxas info    : 239 bytes gmem, 136 bytes cmem[14]
-
-ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_i' for 'sm_20'
-ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_i
-    96 bytes stack frame, 8 bytes spill stores, 16 bytes spill loads
-ptxas info    : Used 48 registers, 40984 bytes smem, 108 bytes cmem[0], 104 bytes cmem[16]
-
-ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_20'
-ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
-    104 bytes stack frame, 8 bytes spill stores, 16 bytes spill loads
+    136 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
 ptxas info    : Used 48 registers, 40984 bytes smem, 116 bytes cmem[0], 104 bytes cmem[16]
 
-###############################################################################
-
-
+#############################################################################################
