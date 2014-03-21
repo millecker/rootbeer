@@ -16,7 +16,7 @@
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF2.jar OnlineCF2-GPU.jar -64bit -noexceptions</echo>
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF2.jar OnlineCF2-GPU.jar -64bit -noexceptions -noarraychecks</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
@@ -25,6 +25,7 @@
 			<arg value="OnlineCF2-GPU.jar" />
 			<arg value="-64bit" />
 			<arg value="-noexceptions" />
+			<arg value="-noarraychecks" />
 		</exec>
 		<echo>java -Xmx4G -jar OnlineCF2-GPU.jar 256 14 3 1 true</echo>
 		<exec executable="java">

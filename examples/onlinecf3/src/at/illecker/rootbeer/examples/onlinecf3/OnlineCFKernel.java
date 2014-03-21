@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package at.illecker.rootbeer.examples.onlinecf3;
 
 import java.io.BufferedReader;
@@ -87,6 +86,7 @@ public class OnlineCFKernel implements Kernel {
     int itemsPerBlock = divup(m_M, gridSize);
 
     // SharedMemory per block (max 12 + 1024 * 8 = 8204 bytes)
+    // e.g., maxtrixRank 256 => 12 + 256 * 8 = 2060 bytes
     int shmStartPos = 0;
     // multVector: matrixRank x Doubles (m_matrixRank * 8 bytes)
     int shmMultVectorStartPos = shmStartPos;
@@ -450,7 +450,7 @@ public class OnlineCFKernel implements Kernel {
           long itemId = (long) pref[1];
           double rating = pref[2];
 
-          // Add preferencesMap which is
+          // Add preferencesMap which is used on GPU only
           if (preferencesMap.containsKey(userId) == false) {
             HashMap<Long, Double> map = new HashMap<Long, Double>();
             map.put(itemId, rating);
@@ -459,14 +459,14 @@ public class OnlineCFKernel implements Kernel {
             preferencesMap.get(userId).put(itemId, rating);
           }
 
-          // Increase userRatingCount
+          // Increase userRatingCount which is used on GPU only
           if (userRatingCount.containsKey(userId) == false) {
             userRatingCount.put(userId, 1l);
           } else {
             userRatingCount.put(userId, userRatingCount.get(userId) + 1);
           }
 
-          // Increase itemRatingCount
+          // Increase itemRatingCount which is used on GPU only
           if (itemRatingCount.containsKey(itemId) == false) {
             itemRatingCount.put(itemId, 1l);
           } else {
