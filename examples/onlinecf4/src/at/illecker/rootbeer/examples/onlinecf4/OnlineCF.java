@@ -63,12 +63,8 @@ public class OnlineCF {
       double[] userVector = m_usersMatrix.get(userId);
       double[] itemVector = m_itemsMatrix.get(itemId);
 
-      // calculated score
-      double calculatedScore = 0;
-      for (int i = 0; i < m_matrixRank; i++) {
-        calculatedScore += userVector[i] * itemVector[i];
-      }
-
+      double calculatedScore = computeScore(userVector, itemVector,
+          m_matrixRank);
       double scoreDifference = expectedScore - calculatedScore;
 
       // calculate new userVector
@@ -90,12 +86,8 @@ public class OnlineCF {
       double[] userVector = m_usersMatrix.get(userId);
       double[] itemVector = m_itemsMatrix.get(itemId);
 
-      // calculated score
-      double calculatedScore = 0;
-      for (int i = 0; i < m_matrixRank; i++) {
-        calculatedScore += userVector[i] * itemVector[i];
-      }
-
+      double calculatedScore = computeScore(userVector, itemVector,
+          m_matrixRank);
       double scoreDifference = expectedScore - calculatedScore;
 
       // calculate new itemVector
@@ -130,12 +122,8 @@ public class OnlineCF {
       double[] userVector = m_usersMatrix.get(userId);
       double[] itemVector = m_itemsMatrix.get(itemId);
 
-      // calculated score
-      double calculatedScore = 0;
-      for (int i = 0; i < m_matrixRank; i++) {
-        calculatedScore += userVector[i] * itemVector[i];
-      }
-
+      double calculatedScore = computeScore(userVector, itemVector,
+          m_matrixRank);
       double scoreDifference = expectedScore - calculatedScore;
 
       // calculate new userVector
@@ -151,6 +139,16 @@ public class OnlineCF {
       m_usersMatrix.put(userId, userVector);
       m_itemsMatrix.put(itemId, itemVector);
     }
+  }
+
+  public static double computeScore(double[] vector1, double[] vector2,
+      int matrixRank) {
+    // calculated score
+    double calculatedScore = 0;
+    for (int i = 0; i < matrixRank; i++) {
+      calculatedScore += vector1[i] * vector2[i];
+    }
+    return calculatedScore;
   }
 
 }
