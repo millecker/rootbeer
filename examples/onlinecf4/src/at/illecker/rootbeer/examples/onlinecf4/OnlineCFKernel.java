@@ -96,14 +96,14 @@ public class OnlineCFKernel implements Kernel {
     int shmMultVectorStartPos = shmItemVectorStartPos + m_matrixRank * 8;
 
     // DEBUG
-    if (RootbeerGpu.getThreadId() == 0) {
-      System.out.println("blockSize: " + blockSize);
-      System.out.println("gridSize: " + gridSize);
-      System.out.println("users(N): " + m_N);
-      System.out.println("items(M): " + m_M);
-      System.out.println("usersPerBlock: " + usersPerBlock);
-      System.out.println("itemsPerBlock: " + itemsPerBlock);
-    }
+    // if (RootbeerGpu.getThreadId() == 0) {
+    // System.out.println("blockSize: " + blockSize);
+    // System.out.println("gridSize: " + gridSize);
+    // System.out.println("users(N): " + m_N);
+    // System.out.println("items(M): " + m_M);
+    // System.out.println("usersPerBlock: " + usersPerBlock);
+    // System.out.println("itemsPerBlock: " + itemsPerBlock);
+    // }
 
     // Start OnlineCF algorithm
     for (int i = 0; i < m_maxIterations; i++) {

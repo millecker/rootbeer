@@ -25,7 +25,7 @@ ant run
 # java -Xmx4G -jar OnlineCF3-GPU.jar 256 14 3 1 false false \
   /home/USERNAME/Downloads/ml-1m/ratings.dat ::
 
-# java -Xmx8G -jar OnlineCF3-GPU.jar 256 14 3 1 false false \
+# java -Xmx16G -jar OnlineCF3-GPU.jar 256 14 3 1 false false \
   /home/USERNAME/Downloads/ml-10M100K/ratings.dat ::
 
 ###############################################################################
