@@ -1,0 +1,38 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="TestPrintln.jar" />
+		<delete file="TestPrintln-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-master-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="TestPrintln.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.testprintln.TestPrintlnKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar TestPrintln.jar TestPrintln-GPU.jar -noexceptions -64bit</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-master-branch.jar" />
+			<arg value="TestPrintln.jar" />
+			<arg value="TestPrintln-GPU.jar" />
+			<arg value="-noexceptions" />
+			<arg value="-64bit" />
+		</exec>
+		<echo>java -Xmx12G -jar TestPrintln-GPU.jar 256 14</echo>
+		<exec executable="java">
+			<arg value="-Xmx12G" />
+			<arg value="-jar" />
+			<arg value="TestPrintln-GPU.jar" />
+			<arg value="256" />
+			<arg value="14" />
+		</exec>
+	</target>
+</project>
