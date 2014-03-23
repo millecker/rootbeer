@@ -398,7 +398,7 @@ public class OnlineCFKernel implements Kernel {
           + ")");
       System.out
           .println("    Argument7=inputFile (optional) | MovieLens inputFile");
-      System.out.println("    Argument8=Separator (optional) | default '"
+      System.out.println("    Argument8=separator (optional) | default '"
           + separator + "' ");
       return;
     }
