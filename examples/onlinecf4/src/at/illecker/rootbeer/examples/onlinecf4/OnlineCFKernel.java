@@ -361,6 +361,17 @@ public class OnlineCFKernel implements Kernel {
     return userItems;
   }
 
+  public static List<double[]> getTestUserItems() {
+    List<double[]> testUserItems = new ArrayList<double[]>();
+    testUserItems.add(new double[] { 1, 1, 4 });
+    testUserItems.add(new double[] { 1, 2, 2.5 });
+    testUserItems.add(new double[] { 1, 3, 3.5 });
+    testUserItems.add(new double[] { 1, 4, 1 });
+    testUserItems.add(new double[] { 1, 5, 3.5 });
+
+    return testUserItems;
+  }
+
   public static double[] getRandomArray(Random rand, int size) {
     double[] arr = new double[size];
     for (int i = 0; i < size; i++) {
@@ -491,6 +502,8 @@ public class OnlineCFKernel implements Kernel {
 
     // Prepare input
     List<double[]> preferences = null;
+    List<double[]> testPreferences = null;
+    int maxTestPrefs = 10;
     Map<Long, HashMap<Long, Double>> preferencesMap = new HashMap<Long, HashMap<Long, Double>>();
     Map<Long, double[]> usersMatrix = null;
     Map<Long, double[]> itemsMatrix = null;
@@ -501,6 +514,7 @@ public class OnlineCFKernel implements Kernel {
     if (inputFile.isEmpty()) { // no inputFile
 
       preferences = getUserItems();
+      testPreferences = getTestUserItems();
       usersMatrix = getVectorMap(rand, 3, matrixRank);
       itemsMatrix = getVectorMap(rand, 5, matrixRank);
 
@@ -541,6 +555,7 @@ public class OnlineCFKernel implements Kernel {
     } else { // parse inputFile
 
       preferences = new ArrayList<double[]>();
+      testPreferences = new ArrayList<double[]>();
       usersMatrix = new HashMap<Long, double[]>();
       itemsMatrix = new HashMap<Long, double[]>();
 
@@ -588,6 +603,12 @@ public class OnlineCFKernel implements Kernel {
           vector[1] = itemId;
           vector[2] = rating;
           preferences.add(vector);
+
+          // Add test preferences
+          maxTestPrefs--;
+          if (maxTestPrefs > 0) {
+            testPreferences.add(vector);
+          }
 
           // Add to preferencesMap which is used on GPU only
           if (preferencesMap.containsKey(userId) == false) {
@@ -732,46 +753,21 @@ public class OnlineCFKernel implements Kernel {
       }
 
       // Test example output
-      if ((isDebbuging) && (inputFile.isEmpty())) {
-        double score = 0;
-        double error = 0;
-        // 1, 1, 4
-        score = OnlineCF.computeScore(
-            kernel.m_usersMatrix[userItemMatrixUserRowMap.get(1l)],
-            kernel.m_itemsMatrix[userItemMatrixItemColMap.get(1l)], matrixRank);
-        error += Math.abs(4 - score);
-        System.out.println("(1, 1, 4): " + score + " error: "
-            + Math.abs(4 - score));
-        // 1, 2, 2.5
-        score = OnlineCF.computeScore(
-            kernel.m_usersMatrix[userItemMatrixUserRowMap.get(1l)],
-            kernel.m_itemsMatrix[userItemMatrixItemColMap.get(2l)], matrixRank);
-        error += Math.abs(2.5 - score);
-        System.out.println("(1, 2, 2.5): " + score + " error: "
-            + Math.abs(2.5 - score));
-        // 1, 3, 3.5
-        score = OnlineCF.computeScore(
-            kernel.m_usersMatrix[userItemMatrixUserRowMap.get(1l)],
-            kernel.m_itemsMatrix[userItemMatrixItemColMap.get(3l)], matrixRank);
-        error += Math.abs(3.5 - score);
-        System.out.println("(1, 3, 3.5): " + score + " error: "
-            + Math.abs(3.5 - score));
-        // 1, 4, 1
-        score = OnlineCF.computeScore(
-            kernel.m_usersMatrix[userItemMatrixUserRowMap.get(1l)],
-            kernel.m_itemsMatrix[userItemMatrixItemColMap.get(4l)], matrixRank);
-        error += Math.abs(1 - score);
-        System.out.println("(1, 4, 1): " + score + " error: "
-            + Math.abs(1 - score));
-        // 1, 5, 3.5
-        score = OnlineCF.computeScore(
-            kernel.m_usersMatrix[userItemMatrixUserRowMap.get(1l)],
-            kernel.m_itemsMatrix[userItemMatrixItemColMap.get(5l)], matrixRank);
-        error += Math.abs(3.5 - score);
-        System.out.println("(1, 5, 3.5): " + score + " error: "
-            + Math.abs(3.5 - score));
-        System.out.println("Total error: " + error);
+      double totalError = 0;
+      for (double[] testPref : testPreferences) {
+        long userId = (long) testPref[0];
+        long itemId = (long) testPref[1];
+        double expectedScore = testPref[2];
+
+        double score = OnlineCF.computeScore(
+            kernel.m_usersMatrix[userItemMatrixUserRowMap.get(userId)],
+            kernel.m_itemsMatrix[userItemMatrixItemColMap.get(itemId)],
+            matrixRank);
+        totalError += Math.abs(expectedScore - score);
+        System.out.println("(" + userId + ", " + itemId + ", " + expectedScore
+            + "): " + score + " error: " + Math.abs(expectedScore - score));
       }
+      System.out.println("Total error: " + totalError);
 
     } else { // run on CPU
 
@@ -853,41 +849,21 @@ public class OnlineCFKernel implements Kernel {
       }
 
       // Test example output
-      if ((isDebbuging) && (inputFile.isEmpty())) {
-        double score = 0;
-        double error = 0;
-        // 1, 1, 4
-        score = OnlineCF.computeScore(onlineCF.m_usersMatrix.get(1l),
-            onlineCF.m_itemsMatrix.get(1l), matrixRank);
-        error += Math.abs(4 - score);
-        System.out.println("(1, 1, 4): " + score + " error: "
-            + Math.abs(4 - score));
-        // 1, 2, 2.5
-        score = OnlineCF.computeScore(onlineCF.m_usersMatrix.get(1l),
-            onlineCF.m_itemsMatrix.get(2l), matrixRank);
-        error += Math.abs(2.5 - score);
-        System.out.println("(1, 2, 2.5): " + score + " error: "
-            + Math.abs(2.5 - score));
-        // 1, 3, 3.5
-        score = OnlineCF.computeScore(onlineCF.m_usersMatrix.get(1l),
-            onlineCF.m_itemsMatrix.get(3l), matrixRank);
-        error += Math.abs(3.5 - score);
-        System.out.println("(1, 3, 3.5): " + score + " error: "
-            + Math.abs(3.5 - score));
-        // 1, 4, 1
-        score = OnlineCF.computeScore(onlineCF.m_usersMatrix.get(1l),
-            onlineCF.m_itemsMatrix.get(4l), matrixRank);
-        error += Math.abs(1 - score);
-        System.out.println("(1, 4, 1): " + score + " error: "
-            + Math.abs(1 - score));
-        // 1, 5, 3.5
-        score = OnlineCF.computeScore(onlineCF.m_usersMatrix.get(1l),
-            onlineCF.m_itemsMatrix.get(5l), matrixRank);
-        error += Math.abs(3.5 - score);
-        System.out.println("(1, 5, 3.5): " + score + " error: "
-            + Math.abs(3.5 - score));
-        System.out.println("Total error: " + error);
+      double totalError = 0;
+      for (double[] testPref : testPreferences) {
+        long userId = (long) testPref[0];
+        long itemId = (long) testPref[1];
+        double expectedScore = testPref[2];
+
+        double score = OnlineCF.computeScore(
+            onlineCF.m_usersMatrix.get(userId),
+            onlineCF.m_itemsMatrix.get(itemId), matrixRank);
+        totalError += Math.abs(expectedScore - score);
+        System.out.println("(" + userId + ", " + itemId + ", " + expectedScore
+            + "): " + score + " error: " + Math.abs(expectedScore - score));
       }
+      System.out.println("Total error: " + totalError);
+
     } // run on CPU
 
   }
