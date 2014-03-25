@@ -69,7 +69,7 @@ public class OnlineCF {
 
       // calculate new userVector
       for (int i = 0; i < m_matrixRank; i++) {
-        userVector[i] += userVector[i] * 2 * m_ALPHA * scoreDifference;
+        userVector[i] += itemVector[i] * 2 * m_ALPHA * scoreDifference;
       }
 
       m_usersMatrix.put(userId, userVector);
@@ -92,7 +92,7 @@ public class OnlineCF {
 
       // calculate new itemVector
       for (int i = 0; i < m_matrixRank; i++) {
-        itemVector[i] += itemVector[i] * 2 * m_ALPHA * scoreDifference;
+        itemVector[i] += userVector[i] * 2 * m_ALPHA * scoreDifference;
       }
 
       m_itemsMatrix.put(itemId, itemVector);
@@ -128,12 +128,12 @@ public class OnlineCF {
 
       // calculate new userVector
       for (int i = 0; i < m_matrixRank; i++) {
-        userVector[i] += userVector[i] * 2 * m_ALPHA * scoreDifference;
+        userVector[i] += itemVector[i] * 2 * m_ALPHA * scoreDifference;
       }
 
       // calculate new itemVector
       for (int i = 0; i < m_matrixRank; i++) {
-        itemVector[i] += itemVector[i] * 2 * m_ALPHA * scoreDifference;
+        itemVector[i] += userVector[i] * 2 * m_ALPHA * scoreDifference;
       }
 
       m_usersMatrix.put(userId, userVector);

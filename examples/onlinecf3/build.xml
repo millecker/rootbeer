@@ -29,7 +29,7 @@
 			<arg value="-maxrregcount 48" />
 			<arg value="-shared-mem-size 2060" />
 		</exec>
-		<echo>java -Xmx4G -jar OnlineCF3-GPU.jar 256 14 3 1 true</echo>
+		<echo>java -Xmx4G -jar OnlineCF3-GPU.jar 256 14 3 150 true</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
@@ -37,7 +37,7 @@
 			<arg value="256" />
 			<arg value="14" />
 			<arg value="3" />
-			<arg value="1" />
+			<arg value="150" />
 			<arg value="true" />
 		</exec>
 	</target>

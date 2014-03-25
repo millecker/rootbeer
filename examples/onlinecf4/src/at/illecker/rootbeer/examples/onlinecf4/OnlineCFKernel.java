@@ -436,7 +436,7 @@ public class OnlineCFKernel implements Kernel {
     int debugLines = 10;
     Random rand = new Random(32L);
 
-    final double ALPHA = 0.01;
+    final double ALPHA = 0.001;
     int matrixRank = 3;
     int maxIterations = 1;
     String inputFile = "";
@@ -471,7 +471,7 @@ public class OnlineCFKernel implements Kernel {
           + ")");
       System.out
           .println("    Argument7=inputFile (optional) | MovieLens inputFile");
-      System.out.println("    Argument8=Separator (optional) | default '"
+      System.out.println("    Argument8=separator (optional) | default '"
           + separator + "' ");
       return;
     }
@@ -503,7 +503,6 @@ public class OnlineCFKernel implements Kernel {
     // Prepare input
     List<double[]> preferences = null;
     List<double[]> testPreferences = null;
-    int maxTestPrefs = 10;
     Map<Long, HashMap<Long, Double>> preferencesMap = new HashMap<Long, HashMap<Long, Double>>();
     Map<Long, double[]> usersMatrix = null;
     Map<Long, double[]> itemsMatrix = null;
@@ -555,7 +554,6 @@ public class OnlineCFKernel implements Kernel {
     } else { // parse inputFile
 
       preferences = new ArrayList<double[]>();
-      testPreferences = new ArrayList<double[]>();
       usersMatrix = new HashMap<Long, double[]>();
       itemsMatrix = new HashMap<Long, double[]>();
 
@@ -604,12 +602,6 @@ public class OnlineCFKernel implements Kernel {
           vector[2] = rating;
           preferences.add(vector);
 
-          // Add test preferences
-          maxTestPrefs--;
-          if (maxTestPrefs > 0) {
-            testPreferences.add(vector);
-          }
-
           // Add to preferencesMap which is used on GPU only
           if (preferencesMap.containsKey(userId) == false) {
             HashMap<Long, Double> map = new HashMap<Long, Double>();
@@ -618,6 +610,7 @@ public class OnlineCFKernel implements Kernel {
           } else {
             preferencesMap.get(userId).put(itemId, rating);
           }
+
         }
         br.close();
 
@@ -754,6 +747,9 @@ public class OnlineCFKernel implements Kernel {
 
       // Test example output
       double totalError = 0;
+      if (inputFile.isEmpty() == false) {
+        testPreferences = preferences;
+      }
       for (double[] testPref : testPreferences) {
         long userId = (long) testPref[0];
         long itemId = (long) testPref[1];
@@ -764,10 +760,14 @@ public class OnlineCFKernel implements Kernel {
             kernel.m_itemsMatrix[userItemMatrixItemColMap.get(itemId)],
             matrixRank);
         totalError += Math.abs(expectedScore - score);
-        System.out.println("(" + userId + ", " + itemId + ", " + expectedScore
-            + "): " + score + " error: " + Math.abs(expectedScore - score));
+        if (inputFile.isEmpty()) {
+          System.out.println("(" + userId + ", " + itemId + ", "
+              + expectedScore + "): " + score + " error: "
+              + Math.abs(expectedScore - score));
+        }
       }
-      System.out.println("Total error: " + totalError);
+      System.out.println("Total error: " + totalError + " avgError: "
+          + (totalError / testPreferences.size()));
 
     } else { // run on CPU
 
@@ -850,6 +850,9 @@ public class OnlineCFKernel implements Kernel {
 
       // Test example output
       double totalError = 0;
+      if (inputFile.isEmpty() == false) {
+        testPreferences = preferences;
+      }
       for (double[] testPref : testPreferences) {
         long userId = (long) testPref[0];
         long itemId = (long) testPref[1];
@@ -859,10 +862,14 @@ public class OnlineCFKernel implements Kernel {
             onlineCF.m_usersMatrix.get(userId),
             onlineCF.m_itemsMatrix.get(itemId), matrixRank);
         totalError += Math.abs(expectedScore - score);
-        System.out.println("(" + userId + ", " + itemId + ", " + expectedScore
-            + "): " + score + " error: " + Math.abs(expectedScore - score));
+        if (inputFile.isEmpty()) {
+          System.out.println("(" + userId + ", " + itemId + ", "
+              + expectedScore + "): " + score + " error: "
+              + Math.abs(expectedScore - score));
+        }
       }
-      System.out.println("Total error: " + totalError);
+      System.out.println("Total error: " + totalError + " avgError: "
+          + (totalError / testPreferences.size()));
 
     } // run on CPU
 
