@@ -136,22 +136,16 @@ public class OnlineCFKernel implements Kernel {
               // Calculate score by summing up multiplications
               // do reduction in shared memory
               // 1-bit right shift = divide by two to the power 1
-              int shmMultVectorEndPos = shmMultVectorStartPos + m_matrixRank
-                  * 8;
-              for (int s = (int) divup(m_matrixRank, 2); s > 0; s >>= 1) {
+              for (int s = roundUpToNextPowerOfTwo(divup(m_matrixRank, 2)); s > 0; s >>= 1) {
 
-                if (thread_idxx < s) {
-                  // sh_mem[ltid] += sh_mem[ltid + s];
-                  int multVectorIndex1 = shmMultVectorStartPos + thread_idxx
-                      * 8;
-                  int multVectorIndex2 = shmMultVectorStartPos
-                      + (thread_idxx + s) * 8;
-                  double val1 = RootbeerGpu.getSharedDouble(multVectorIndex1);
-                  double val2 = 0;
-                  if (multVectorIndex2 < shmMultVectorEndPos) {
-                    val2 = RootbeerGpu.getSharedDouble(multVectorIndex2);
-                  }
-                  RootbeerGpu.setSharedDouble(multVectorIndex1, val1 + val2);
+                if ((thread_idxx < s) && (thread_idxx + s) < m_matrixRank) {
+                  // sh_mem[tid] += sh_mem[tid + s];
+                  RootbeerGpu.setSharedDouble(
+                      shmMultVectorStartPos + thread_idxx * 8,
+                      RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                          + thread_idxx * 8)
+                          + RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                              + (thread_idxx + s) * 8));
                 }
 
                 // Sync all threads within a block
@@ -162,11 +156,9 @@ public class OnlineCFKernel implements Kernel {
               // Each thread does one update operation of vector u
               if (thread_idxx < m_matrixRank) {
 
-                double calculatedScore = RootbeerGpu
-                    .getSharedDouble(shmMultVectorStartPos);
-
                 m_usersMatrix[userId][thread_idxx] += m_itemsMatrix[itemId][thread_idxx]
-                    * (2 * m_ALPHA * (expectedScore - calculatedScore));
+                    * (2 * m_ALPHA * (expectedScore - RootbeerGpu
+                        .getSharedDouble(shmMultVectorStartPos)));
               }
 
               // Sync all threads within a block
@@ -212,23 +204,18 @@ public class OnlineCFKernel implements Kernel {
               // Calculate score by summing up multiplications
               // do reduction in shared memory
               // 1-bit right shift = divide by two to the power 1
-              int shmMultVectorEndPos = shmMultVectorStartPos + m_matrixRank
-                  * 8;
-              for (int s = (int) divup(m_matrixRank, 2); s > 0; s >>= 1) {
+              for (int s = roundUpToNextPowerOfTwo(divup(m_matrixRank, 2)); s > 0; s >>= 1) {
 
-                if (thread_idxx < s) {
-                  // sh_mem[ltid] += sh_mem[ltid + s];
-                  int multVectorIndex1 = shmMultVectorStartPos + thread_idxx
-                      * 8;
-                  int multVectorIndex2 = shmMultVectorStartPos
-                      + (thread_idxx + s) * 8;
-                  double val1 = RootbeerGpu.getSharedDouble(multVectorIndex1);
-                  double val2 = 0;
-                  if (multVectorIndex2 < shmMultVectorEndPos) {
-                    val2 = RootbeerGpu.getSharedDouble(multVectorIndex2);
-                  }
-                  RootbeerGpu.setSharedDouble(multVectorIndex1, val1 + val2);
+                if ((thread_idxx < s) && (thread_idxx + s) < m_matrixRank) {
+                  // sh_mem[tid] += sh_mem[tid + s];
+                  RootbeerGpu.setSharedDouble(
+                      shmMultVectorStartPos + thread_idxx * 8,
+                      RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                          + thread_idxx * 8)
+                          + RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                              + (thread_idxx + s) * 8));
                 }
+
                 // Sync all threads within a block
                 RootbeerGpu.syncthreads();
               }
@@ -237,11 +224,9 @@ public class OnlineCFKernel implements Kernel {
               // Each thread does one update operation of vector u
               if (thread_idxx < m_matrixRank) {
 
-                double calculatedScore = RootbeerGpu
-                    .getSharedDouble(shmMultVectorStartPos);
-
                 m_itemsMatrix[itemId][thread_idxx] += m_usersMatrix[userId][thread_idxx]
-                    * (2 * m_ALPHA * (expectedScore - calculatedScore));
+                    * (2 * m_ALPHA * (expectedScore - RootbeerGpu
+                        .getSharedDouble(shmMultVectorStartPos)));
               }
 
               // Sync all threads within a block
@@ -266,6 +251,41 @@ public class OnlineCFKernel implements Kernel {
     } else {
       return x / y;
     }
+  }
+
+  private int roundUpToNextPowerOfTwo(int x) {
+    x--;
+    x |= x >> 1; // handle 2 bit numbers
+    x |= x >> 2; // handle 4 bit numbers
+    x |= x >> 4; // handle 8 bit numbers
+    x |= x >> 8; // handle 16 bit numbers
+    x |= x >> 16; // handle 32 bit numbers
+    x++;
+    return x;
+  }
+
+  private synchronized void debug(int idxx, int userId, int itemId,
+      double[] val1, double[] val2) {
+    System.out.print(idxx);
+    System.out.print(" userId: ");
+    System.out.print(userId);
+    System.out.print(" userVector: ");
+    System.out.println(arrayToString(val1));
+    System.out.print(idxx);
+    System.out.print(" itemId: ");
+    System.out.print(itemId);
+    System.out.print(" itemVector: ");
+    System.out.println(arrayToString(val2));
+  }
+
+  private synchronized void debug(int idxx, double val) {
+    System.out.print(idxx);
+    System.out.println(" sum: " + val);
+  }
+
+  private synchronized void debug(int idxx, double val1, double val2) {
+    System.out.print(idxx);
+    System.out.println(" " + val1 + " + " + val2);
   }
 
   private String arrayToString(double[] arr) {
