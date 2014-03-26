@@ -17,7 +17,6 @@
 package at.illecker.rootbeer.examples.onlinecf3;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -46,11 +45,14 @@ public class OnlineCF {
     }
   }
 
-  public void compute() {
+  public void compute(boolean cpuEmulatesGPU) {
     for (int i = 0; i < m_maxIterations; i++) {
-      // computeUserValues();
-      // computeItemValues();
-      computeAllValues();
+      if (cpuEmulatesGPU) {
+        computeUserValues();
+        computeItemValues();
+      } else {
+        computeAllValues();
+      }
     }
   }
 
