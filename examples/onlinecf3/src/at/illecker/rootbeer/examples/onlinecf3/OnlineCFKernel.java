@@ -113,7 +113,7 @@ public class OnlineCFKernel implements Kernel {
       // Loop over all usersPerBlock
       for (int u = 0; u < usersPerBlock; u++) {
 
-        int userId = (usersPerBlock * u) + block_idxx;
+        int userId = (gridSize * u) + block_idxx;
         if (userId < m_N) {
 
           // Each user loops over all items
@@ -189,7 +189,7 @@ public class OnlineCFKernel implements Kernel {
       // Loop over all itemsPerBlock
       for (int v = 0; v < itemsPerBlock; v++) {
 
-        int itemId = (itemsPerBlock * v) + block_idxx;
+        int itemId = (gridSize * v) + block_idxx;
         if (itemId < m_M) {
 
           // Each user loops over all items
