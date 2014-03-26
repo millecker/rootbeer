@@ -319,8 +319,9 @@ public class OnlineCFKernel implements Kernel {
 
     List<double[]> userItems = new ArrayList<double[]>();
     int possibleUserItemRatings = userCount * itemCount;
-    int userItemRatings = possibleUserItemRatings
-        * (percentNonZeroValues / 100);
+    int userItemRatings = possibleUserItemRatings * percentNonZeroValues / 100;
+    System.out.println("possibleRatings: " + possibleUserItemRatings
+        + " ratings: " + userItemRatings);
     Set<Map.Entry<Integer, Integer>> userItemPairs = new HashSet<Map.Entry<Integer, Integer>>();
 
     for (int i = 0; i < userItemRatings; i++) {
@@ -517,13 +518,15 @@ public class OnlineCFKernel implements Kernel {
     System.out.println("matrixRank: " + matrixRank);
     System.out.println("maxIterations: " + maxIterations);
     System.out.println("ALPHA: " + ALPHA);
-    if (userCount > 0) {
-      System.out.println("userCount: " + userCount);
-    }
-    if (itemCount > 0) {
-      System.out.println("itemCount: " + itemCount);
-    }
-    if (!inputFile.isEmpty()) {
+    if (inputFile.isEmpty()) {
+      if (userCount > 0) {
+        System.out.println("userCount: " + userCount);
+      }
+      if (itemCount > 0) {
+        System.out.println("itemCount: " + itemCount);
+      }
+      System.out.println("percentNonZeroValues: " + percentNonZeroValues + "%");
+    } else {
       System.out.println("inputFile: " + inputFile);
       System.out.println("separator: '" + separator + "'");
     }
