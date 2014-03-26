@@ -20,11 +20,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 
 import org.trifort.rootbeer.runtime.Context;
 import org.trifort.rootbeer.runtime.Kernel;
@@ -114,7 +117,7 @@ public class OnlineCFKernel implements Kernel {
       // Loop over all usersPerBlock
       for (int u = 0; u < usersPerBlock; u++) {
 
-        int userId = (usersPerBlock * u) + block_idxx;
+        int userId = (gridSize * u) + block_idxx;
         if (userId < m_N) {
 
           // Setup userVector in SharedMemory
@@ -130,6 +133,7 @@ public class OnlineCFKernel implements Kernel {
             double expectedScore = m_userItemMatrix[userId][itemId];
             if (expectedScore != 0) {
 
+              // Each thread within a block computes one multiplication
               if (thread_idxx < m_matrixRank) {
                 // Setup itemVector in SharedMemory
                 RootbeerGpu.setSharedDouble(shmItemVectorStartPos + thread_idxx
@@ -220,7 +224,7 @@ public class OnlineCFKernel implements Kernel {
       // Loop over all itemsPerBlock
       for (int v = 0; v < itemsPerBlock; v++) {
 
-        int itemId = (itemsPerBlock * v) + block_idxx;
+        int itemId = (gridSize * v) + block_idxx;
         if (itemId < m_M) {
 
           // Setup itemVector in SharedMemory
@@ -236,6 +240,7 @@ public class OnlineCFKernel implements Kernel {
             double expectedScore = m_userItemMatrix[userId][itemId];
             if (expectedScore != 0) {
 
+              // Each thread within a block computes one multiplication
               if (thread_idxx < m_matrixRank) {
                 // Setup userVector in SharedMemory
                 RootbeerGpu.setSharedDouble(shmUserVectorStartPos + thread_idxx
@@ -340,36 +345,75 @@ public class OnlineCFKernel implements Kernel {
     return "null";
   }
 
+  // **********************************************************************
+  // Generate input
+  // **********************************************************************
   public static List<double[]> getUserItems() {
     List<double[]> userItems = new ArrayList<double[]>();
-    userItems.add(new double[] { 1, 1, 4 });
-    userItems.add(new double[] { 1, 2, 2.5 });
-    userItems.add(new double[] { 1, 3, 3.5 });
+    userItems.add(new double[] { 0, 0, 4 });
+    userItems.add(new double[] { 0, 1, 2.5 });
+    userItems.add(new double[] { 0, 2, 3.5 });
 
-    userItems.add(new double[] { 2, 1, 4 });
-    userItems.add(new double[] { 2, 2, 2.5 });
-    userItems.add(new double[] { 2, 3, 3.5 });
-    userItems.add(new double[] { 2, 4, 1 });
-    userItems.add(new double[] { 2, 5, 3.5 });
+    userItems.add(new double[] { 1, 0, 4 });
+    userItems.add(new double[] { 1, 1, 2.5 });
+    userItems.add(new double[] { 1, 2, 3.5 });
+    userItems.add(new double[] { 1, 3, 1 });
+    userItems.add(new double[] { 1, 4, 3.5 });
 
-    userItems.add(new double[] { 3, 1, 4 });
-    userItems.add(new double[] { 3, 2, 2.5 });
-    userItems.add(new double[] { 3, 3, 3.5 });
-    userItems.add(new double[] { 3, 4, 1 });
-    userItems.add(new double[] { 3, 5, 3.5 });
+    userItems.add(new double[] { 2, 0, 4 });
+    userItems.add(new double[] { 2, 1, 2.5 });
+    userItems.add(new double[] { 2, 2, 3.5 });
+    userItems.add(new double[] { 2, 3, 1 });
+    userItems.add(new double[] { 2, 4, 3.5 });
 
     return userItems;
   }
 
   public static List<double[]> getTestUserItems() {
     List<double[]> testUserItems = new ArrayList<double[]>();
-    testUserItems.add(new double[] { 1, 1, 4 });
-    testUserItems.add(new double[] { 1, 2, 2.5 });
-    testUserItems.add(new double[] { 1, 3, 3.5 });
-    testUserItems.add(new double[] { 1, 4, 1 });
-    testUserItems.add(new double[] { 1, 5, 3.5 });
+    testUserItems.add(new double[] { 0, 0, 4 });
+    testUserItems.add(new double[] { 0, 1, 2.5 });
+    testUserItems.add(new double[] { 0, 2, 3.5 });
+    testUserItems.add(new double[] { 0, 3, 1 });
+    testUserItems.add(new double[] { 0, 4, 3.5 });
 
     return testUserItems;
+  }
+
+  public static List<double[]> getRandomUserItems(Random rand, int userCount,
+      int itemCount, int percentNonZeroValues) {
+
+    List<double[]> userItems = new ArrayList<double[]>();
+    int possibleUserItemRatings = userCount * itemCount;
+    int userItemRatings = possibleUserItemRatings * percentNonZeroValues / 100;
+    System.out.println("possibleRatings: " + possibleUserItemRatings
+        + " ratings: " + userItemRatings);
+    Set<Map.Entry<Integer, Integer>> userItemPairs = new HashSet<Map.Entry<Integer, Integer>>();
+
+    for (int i = 0; i < userItemRatings; i++) {
+
+      Map.Entry<Integer, Integer> userItemPair;
+      do {
+        int userId = rand.nextInt(userCount);
+        int itemId = rand.nextInt(itemCount);
+        userItemPair = new AbstractMap.SimpleImmutableEntry<Integer, Integer>(
+            userId, itemId);
+      } while (userItemPairs.contains(userItemPair));
+
+      userItemPairs.add(userItemPair);
+      userItems.add(new double[] { userItemPair.getKey(),
+          userItemPair.getValue(), (rand.nextInt(5) + 1) });
+    }
+    return userItems;
+  }
+
+  public static HashMap<Long, double[]> getVectorMap(Random rand, int size,
+      int matrixRank) {
+    HashMap<Long, double[]> vectorMap = new HashMap<Long, double[]>(size);
+    for (long i = 0; i < size; i++) {
+      vectorMap.put(i, getRandomArray(rand, matrixRank));
+    }
+    return vectorMap;
   }
 
   public static double[] getRandomArray(Random rand, int size) {
@@ -380,15 +424,9 @@ public class OnlineCFKernel implements Kernel {
     return arr;
   }
 
-  public static HashMap<Long, double[]> getVectorMap(Random rand, int size,
-      int matrixRank) {
-    HashMap<Long, double[]> vectorMap = new HashMap<Long, double[]>(size);
-    for (long i = 1; i <= size; i++) {
-      vectorMap.put(i, getRandomArray(rand, matrixRank));
-    }
-    return vectorMap;
-  }
-
+  // **********************************************************************
+  // Sort Map by keys
+  // **********************************************************************
   public static <K extends Comparable, V extends Comparable> Map<K, V> sortByKeys(
       Map<K, V> map) {
 
@@ -405,6 +443,9 @@ public class OnlineCFKernel implements Kernel {
     return sortedMap;
   }
 
+  // **********************************************************************
+  // Sort Map by values
+  // **********************************************************************
   public static <K extends Comparable, V extends Comparable> Map<K, V> sortByValues(
       Map<K, V> map) {
 
@@ -428,22 +469,33 @@ public class OnlineCFKernel implements Kernel {
     return sortedMap;
   }
 
+  // **********************************************************************
+  // Main methods
+  // **********************************************************************
   public static void main(String[] args) {
+    Random rand = new Random(32L);
+    boolean isDebbuging = false;
+    int debugLines = 10;
 
     int blockSize = 1024;
     int gridSize = 14;
-    boolean isDebbuging = false;
-    int debugLines = 10;
-    Random rand = new Random(32L);
 
-    final double ALPHA = 0.001;
     int matrixRank = 3;
     int maxIterations = 1;
+    double ALPHA = 0.001;
+    int userCount = 0;
+    int itemCount = 0;
+    int percentNonZeroValues = 50;
+
     String inputFile = "";
     String separator = "\\t";
-    boolean useCPU = false;
 
-    // parse arguments
+    boolean useCPU = false;
+    boolean cpuEmulatesGPU = false;
+
+    // **********************************************************************
+    // Parse command line arguments
+    // **********************************************************************
     if ((args.length > 0) && (args.length >= 5)) {
       blockSize = Integer.parseInt(args[0]);
       gridSize = Integer.parseInt(args[1]);
@@ -455,10 +507,31 @@ public class OnlineCFKernel implements Kernel {
         useCPU = Boolean.parseBoolean(args[5]);
       }
       if (args.length > 6) {
-        inputFile = args[6];
+        cpuEmulatesGPU = Boolean.parseBoolean(args[6]);
       }
       if (args.length > 7) {
-        separator = args[7];
+        double alpha = Double.parseDouble(args[7]);
+        if (alpha > 0) {
+          ALPHA = alpha;
+        }
+      }
+      if (args.length > 8) {
+        userCount = Integer.parseInt(args[8]);
+      }
+      if (args.length > 9) {
+        itemCount = Integer.parseInt(args[9]);
+      }
+      if (args.length > 10) {
+        int percent = Integer.parseInt(args[10]);
+        if ((percent > 0) && (percent <= 100)) {
+          percentNonZeroValues = percent;
+        }
+      }
+      if (args.length > 11) {
+        inputFile = args[11];
+      }
+      if (args.length > 12) {
+        separator = args[12];
       }
     } else {
       System.out.println("Wrong argument size!");
@@ -469,9 +542,20 @@ public class OnlineCFKernel implements Kernel {
       System.out.println("    Argument5=debug(true|false=default)");
       System.out.println("    Argument6=useCPU (optional) | default (" + useCPU
           + ")");
+      System.out.println("    Argument7=CPUemulatesGPU (optional) | default ("
+          + cpuEmulatesGPU + ")");
+      System.out.println("    Argument8=ALPHA (optional) | default (" + ALPHA
+          + ")");
+      System.out.println("    Argument9=userCount (optional) | default ("
+          + userCount + ")");
+      System.out.println("    Argument10=itemCount (optional) | default ("
+          + itemCount + ")");
       System.out
-          .println("    Argument7=inputFile (optional) | MovieLens inputFile");
-      System.out.println("    Argument8=separator (optional) | default '"
+          .println("    Argument11=percentNonZeroValues (optional) | default ("
+              + percentNonZeroValues + "%)");
+      System.out
+          .println("    Argument12=inputFile (optional) | MovieLens inputFile");
+      System.out.println("    Argument13=separator (optional) | default '"
           + separator + "' ");
       return;
     }
@@ -487,68 +571,86 @@ public class OnlineCFKernel implements Kernel {
       return;
     }
 
-    // Debug output
+    // **********************************************************************
+    // Debug infos
+    // **********************************************************************
     System.out.println("useCPU: " + useCPU);
     if (!useCPU) {
       System.out.println("blockSize: " + blockSize);
       System.out.println("gridSize: " + gridSize);
+    } else {
+      System.out.println("cpuEmulatesGPU: " + cpuEmulatesGPU);
     }
     System.out.println("matrixRank: " + matrixRank);
     System.out.println("maxIterations: " + maxIterations);
-    if (!inputFile.isEmpty()) {
+    System.out.println("ALPHA: " + ALPHA);
+    if (inputFile.isEmpty()) {
+      if (userCount > 0) {
+        System.out.println("userCount: " + userCount);
+      }
+      if (itemCount > 0) {
+        System.out.println("itemCount: " + itemCount);
+      }
+      System.out.println("percentNonZeroValues: " + percentNonZeroValues + "%");
+    } else {
       System.out.println("inputFile: " + inputFile);
       System.out.println("separator: '" + separator + "'");
     }
 
+    // **********************************************************************
     // Prepare input
+    // **********************************************************************
     List<double[]> preferences = null;
     List<double[]> testPreferences = null;
-    Map<Long, HashMap<Long, Double>> preferencesMap = new HashMap<Long, HashMap<Long, Double>>();
     Map<Long, double[]> usersMatrix = null;
     Map<Long, double[]> itemsMatrix = null;
-
+    Map<Long, HashMap<Long, Double>> preferencesMap = new HashMap<Long, HashMap<Long, Double>>();
     Map<Long, Long> userRatingCount = new HashMap<Long, Long>();
     Map<Long, Long> itemRatingCount = new HashMap<Long, Long>();
 
     if (inputFile.isEmpty()) { // no inputFile
 
-      preferences = getUserItems();
-      testPreferences = getTestUserItems();
-      usersMatrix = getVectorMap(rand, 3, matrixRank);
-      itemsMatrix = getVectorMap(rand, 5, matrixRank);
+      if ((userCount > 0) && (itemCount > 0)) {
+        preferences = getRandomUserItems(rand, userCount, itemCount,
+            percentNonZeroValues);
+        testPreferences = preferences;
+        usersMatrix = getVectorMap(rand, userCount, matrixRank);
+        itemsMatrix = getVectorMap(rand, itemCount, matrixRank);
+      } else {
+        preferences = getUserItems();
+        testPreferences = getTestUserItems();
+        usersMatrix = getVectorMap(rand, 3, matrixRank);
+        itemsMatrix = getVectorMap(rand, 5, matrixRank);
+      }
 
-      // used on GPU only
-      if (!useCPU) {
+      // Build preferencesMap, userRatingCount and itemRatingCount
+      for (double[] pref : preferences) {
+        long userId = (long) pref[0];
+        long itemId = (long) pref[1];
+        double rating = pref[2];
 
-        for (double[] pref : preferences) {
-          long userId = (long) pref[0];
-          long itemId = (long) pref[1];
-          double rating = pref[2];
-
-          // Add preferencesMap which is used on GPU only
-          if (preferencesMap.containsKey(userId) == false) {
-            HashMap<Long, Double> map = new HashMap<Long, Double>();
-            map.put(itemId, rating);
-            preferencesMap.put(userId, map);
-          } else {
-            preferencesMap.get(userId).put(itemId, rating);
-          }
-
-          // Increase userRatingCount which is used on GPU only
-          if (userRatingCount.containsKey(userId) == false) {
-            userRatingCount.put(userId, 1l);
-          } else {
-            userRatingCount.put(userId, userRatingCount.get(userId) + 1);
-          }
-
-          // Increase itemRatingCount which is used on GPU only
-          if (itemRatingCount.containsKey(itemId) == false) {
-            itemRatingCount.put(itemId, 1l);
-          } else {
-            itemRatingCount.put(itemId, itemRatingCount.get(itemId) + 1);
-          }
+        // Add preferencesMap which is used on GPU only
+        if (preferencesMap.containsKey(userId) == false) {
+          HashMap<Long, Double> map = new HashMap<Long, Double>();
+          map.put(itemId, rating);
+          preferencesMap.put(userId, map);
+        } else {
+          preferencesMap.get(userId).put(itemId, rating);
         }
 
+        // Increase userRatingCount which is used on GPU only
+        if (userRatingCount.containsKey(userId) == false) {
+          userRatingCount.put(userId, 1l);
+        } else {
+          userRatingCount.put(userId, userRatingCount.get(userId) + 1);
+        }
+
+        // Increase itemRatingCount which is used on GPU only
+        if (itemRatingCount.containsKey(itemId) == false) {
+          itemRatingCount.put(itemId, 1l);
+        } else {
+          itemRatingCount.put(itemId, itemRatingCount.get(itemId) + 1);
+        }
       }
 
     } else { // parse inputFile
@@ -577,7 +679,6 @@ public class OnlineCFKernel implements Kernel {
             }
             usersMatrix.put(userId, vals);
             userRatingCount.put(userId, 1l);
-
           } else {
             userRatingCount.put(userId, userRatingCount.get(userId) + 1);
           }
@@ -590,7 +691,6 @@ public class OnlineCFKernel implements Kernel {
             }
             itemsMatrix.put(itemId, vals);
             itemRatingCount.put(itemId, 1l);
-
           } else {
             itemRatingCount.put(itemId, itemRatingCount.get(itemId) + 1);
           }
@@ -614,6 +714,9 @@ public class OnlineCFKernel implements Kernel {
         }
         br.close();
 
+        // Set testPreferences to all preferences
+        testPreferences = preferences;
+
       } catch (NumberFormatException e) {
         e.printStackTrace();
       } catch (IOException e) {
@@ -621,7 +724,10 @@ public class OnlineCFKernel implements Kernel {
       }
     }
 
-    if (!useCPU) {
+    // **********************************************************************
+    // Run application
+    // **********************************************************************
+    if (!useCPU) { // use GPU
 
       Map<Long, Long> sortedUserRatingCount = sortByValues(userRatingCount);
       Map<Long, Long> sortedItemRatingCount = sortByValues(itemRatingCount);
@@ -655,7 +761,8 @@ public class OnlineCFKernel implements Kernel {
               + rowId
               + "]: "
               + Arrays.toString(Arrays.copyOfRange(userItemMatrix[rowId], 0,
-                  Math.min(itemsMatrix.size(), debugLines))));
+                  Math.min(itemsMatrix.size(), debugLines))) + " userRatings: "
+              + sortedUserRatingCount.get(userId));
         }
         rowId++;
       }
@@ -670,7 +777,7 @@ public class OnlineCFKernel implements Kernel {
           userMatrix[rowId][i] = vector[i];
         }
         if ((isDebbuging) && (rowId < debugLines)) {
-          System.out.println("userMatrix userId: " + userId + " "
+          System.out.println("userId: " + userId + " "
               + Arrays.toString(vector));
         }
         rowId++;
@@ -686,7 +793,7 @@ public class OnlineCFKernel implements Kernel {
           itemMatrix[rowId][i] = vector[i];
         }
         if ((isDebbuging) && (rowId < debugLines)) {
-          System.out.println("itemMatrix itemId: " + itemId + " "
+          System.out.println("itemId: " + itemId + " "
               + Arrays.toString(vector));
         }
         rowId++;
@@ -747,9 +854,7 @@ public class OnlineCFKernel implements Kernel {
 
       // Test example output
       double totalError = 0;
-      if (inputFile.isEmpty() == false) {
-        testPreferences = preferences;
-      }
+      int i = 0;
       for (double[] testPref : testPreferences) {
         long userId = (long) testPref[0];
         long itemId = (long) testPref[1];
@@ -760,7 +865,7 @@ public class OnlineCFKernel implements Kernel {
             kernel.m_itemsMatrix[userItemMatrixItemColMap.get(itemId)],
             matrixRank);
         totalError += Math.abs(expectedScore - score);
-        if (inputFile.isEmpty()) {
+        if (++i < debugLines) {
           System.out.println("(" + userId + ", " + itemId + ", "
               + expectedScore + "): " + score + " error: "
               + Math.abs(expectedScore - score));
@@ -771,41 +876,78 @@ public class OnlineCFKernel implements Kernel {
 
     } else { // run on CPU
 
+      Map<Long, Long> sortedUserRatingCount = null;
+      Map<Long, Long> sortedItemRatingCount = null;
+
+      if (cpuEmulatesGPU) {
+        // Reorder preferences
+        sortedUserRatingCount = sortByValues(userRatingCount);
+        sortedItemRatingCount = sortByValues(itemRatingCount);
+
+        List<double[]> reorderedPreferences = new ArrayList<double[]>();
+        for (Long userId : sortedUserRatingCount.keySet()) {
+          for (Long itemId : sortedItemRatingCount.keySet()) {
+            if (preferencesMap.get(userId).containsKey(itemId)) {
+              reorderedPreferences.add(new double[] { userId, itemId,
+                  preferencesMap.get(userId).get(itemId) });
+            }
+          }
+        }
+        preferences = reorderedPreferences;
+      }
+
       // Debug input
       System.out.println("preferences: length: " + preferences.size());
       if (isDebbuging) {
         for (int i = 0; i < Math.min(preferences.size(), debugLines); i++) {
-          System.out.println("preferences userId: '" + preferences.get(i)[0]
-              + "' itemId: '" + preferences.get(i)[1] + "' value: '"
-              + preferences.get(i)[2]);
+          System.out.println("(" + (long) preferences.get(i)[0] + ", "
+              + (long) preferences.get(i)[1] + ", " + preferences.get(i)[2]
+              + ")");
         }
       }
+
       System.out.println("usersMatrix: length: " + usersMatrix.size());
       if (isDebbuging) {
         int i = 0;
-        Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
-            .iterator();
-        while ((userIt.hasNext()) && (i < debugLines)) {
-          Entry<Long, double[]> entry = userIt.next();
-          long userId = entry.getKey();
-          double[] vector = entry.getValue();
-          System.out.println("usersMatrix userId: '" + userId + " value: '"
-              + Arrays.toString(vector));
-          i++;
+        if (cpuEmulatesGPU) {
+          for (Long userId : sortedUserRatingCount.keySet()) {
+            System.out.println("userId: " + userId + " value: "
+                + Arrays.toString(usersMatrix.get(userId)));
+            if (++i >= debugLines) {
+              break;
+            }
+          }
+        } else {
+          Iterator<Entry<Long, double[]>> userIt = usersMatrix.entrySet()
+              .iterator();
+          while ((userIt.hasNext()) && (i < debugLines)) {
+            Entry<Long, double[]> entry = userIt.next();
+            System.out.println("userId: " + entry.getKey() + " value: "
+                + Arrays.toString(entry.getValue()));
+            i++;
+          }
         }
       }
       System.out.println("itemsMatrix: length: " + itemsMatrix.size());
       if (isDebbuging) {
         int i = 0;
-        Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
-            .iterator();
-        while ((itemIt.hasNext()) && (i < debugLines)) {
-          Entry<Long, double[]> entry = itemIt.next();
-          long itemId = entry.getKey();
-          double[] vector = entry.getValue();
-          System.out.println("itemsMatrix itemId: '" + itemId + " value: '"
-              + Arrays.toString(vector));
-          i++;
+        if (cpuEmulatesGPU) {
+          for (Long itemId : sortedItemRatingCount.keySet()) {
+            System.out.println("itemId: " + itemId + " value: "
+                + Arrays.toString(itemsMatrix.get(itemId)));
+            if (++i >= debugLines) {
+              break;
+            }
+          }
+        } else {
+          Iterator<Entry<Long, double[]>> itemIt = itemsMatrix.entrySet()
+              .iterator();
+          while ((itemIt.hasNext()) && (i < debugLines)) {
+            Entry<Long, double[]> entry = itemIt.next();
+            System.out.println("itemId: " + entry.getKey() + " value: "
+                + Arrays.toString(entry.getValue()));
+            i++;
+          }
         }
       }
 
@@ -815,7 +957,7 @@ public class OnlineCFKernel implements Kernel {
           ALPHA, matrixRank, maxIterations);
 
       long startTime = System.currentTimeMillis();
-      onlineCF.compute();
+      onlineCF.compute(cpuEmulatesGPU);
       long endTime = System.currentTimeMillis() - startTime;
       System.out.println("CPU Time: " + endTime + " ms");
 
@@ -829,7 +971,7 @@ public class OnlineCFKernel implements Kernel {
           Entry<Long, double[]> entry = userIt.next();
           long userId = entry.getKey();
           double[] vector = entry.getValue();
-          System.out.println("usersMatrix userId: '" + userId + " value: '"
+          System.out.println("userId: " + userId + " value: "
               + Arrays.toString(vector));
           i++;
         }
@@ -842,7 +984,7 @@ public class OnlineCFKernel implements Kernel {
           Entry<Long, double[]> entry = itemIt.next();
           long itemId = entry.getKey();
           double[] vector = entry.getValue();
-          System.out.println("itemsMatrix itemId: '" + itemId + " value: '"
+          System.out.println("itemId: " + itemId + " value: "
               + Arrays.toString(vector));
           i++;
         }
@@ -850,9 +992,7 @@ public class OnlineCFKernel implements Kernel {
 
       // Test example output
       double totalError = 0;
-      if (inputFile.isEmpty() == false) {
-        testPreferences = preferences;
-      }
+      int i = 0;
       for (double[] testPref : testPreferences) {
         long userId = (long) testPref[0];
         long itemId = (long) testPref[1];
@@ -862,7 +1002,7 @@ public class OnlineCFKernel implements Kernel {
             onlineCF.m_usersMatrix.get(userId),
             onlineCF.m_itemsMatrix.get(itemId), matrixRank);
         totalError += Math.abs(expectedScore - score);
-        if (inputFile.isEmpty()) {
+        if (++i < debugLines) {
           System.out.println("(" + userId + ", " + itemId + ", "
               + expectedScore + "): " + score + " error: "
               + Math.abs(expectedScore - score));

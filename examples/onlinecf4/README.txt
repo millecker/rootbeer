@@ -12,14 +12,15 @@ ant run
 
 # Run GPU Kernel
 # java -Xmx4G -jar OnlineCF4-GPU.jar \
-  [blockSize=256 gridSize=14 matrixRank=3 maxIterations=1 debug=false]
-  [useCPU=false]
+  [blockSize=256 gridSize=14 matrixRank=3 maxIterations=150 debug=false]
+  [useCPU=false] [CPUemulatesGPU=false] [ALPHA=0.001] 
+  [userCount=0] [itemCount=0] [percentNonZeroValues=50]
   [inputFile=/home/USERNAME/Downloads/ml-100k/u.data]
   [separator=::]
 
-# java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 3 1 true
+# java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 3 150 true
 
-# java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 3 1 false false \
+# java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 3 150 false false \
   /home/USERNAME/Downloads/ml-100k/u.data
 
 # java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 3 1 false false \

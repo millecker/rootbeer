@@ -45,11 +45,14 @@ public class OnlineCF {
     }
   }
 
-  public void compute() {
+  public void compute(boolean cpuEmulatesGPU) {
     for (int i = 0; i < m_maxIterations; i++) {
-      // computeUserValues();
-      // computeItemValues();
-      computeAllValues();
+      if (cpuEmulatesGPU) {
+        computeUserValues();
+        computeItemValues();
+      } else {
+        computeAllValues();
+      }
     }
   }
 
