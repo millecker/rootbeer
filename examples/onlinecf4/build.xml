@@ -16,7 +16,7 @@
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF4.jar OnlineCF4-GPU.jar -64bit -noexceptions -noarraychecks -maxrregcount 48 -shared-mem-size 6156</echo>
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF4.jar OnlineCF4-GPU.jar -64bit -noexceptions -noarraychecks -maxrregcount 40 -shared-mem-size 6156</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
@@ -26,7 +26,7 @@
 			<arg value="-64bit" />
 			<arg value="-noexceptions" />
 			<arg value="-noarraychecks" />
-			<arg value="-maxrregcount 48" />
+			<arg value="-maxrregcount 40" />
 			<arg value="-shared-mem-size 6156" />
 		</exec>
 		<echo>java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 3 150 true</echo>

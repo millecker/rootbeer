@@ -82,11 +82,12 @@ public class OnlineCFKernel implements Kernel {
     int thread_idxx = RootbeerGpu.getThreadIdxx();
 
     if (blockSize < m_matrixRank) {
-      return; // TODO Error
+      return;
     }
 
     int usersPerBlock = divup(m_N, gridSize);
     int itemsPerBlock = divup(m_M, gridSize);
+    int reductionStart = roundUpToNextPowerOfTwo(divup(m_matrixRank, 2));
 
     // SharedMemory per block (max 12 + 1024 * 8 = 8204 bytes)
     // e.g., maxtrixRank 256 => 12 + 256 * 8 = 2060 bytes
@@ -136,7 +137,7 @@ public class OnlineCFKernel implements Kernel {
               // Calculate score by summing up multiplications
               // do reduction in shared memory
               // 1-bit right shift = divide by two to the power 1
-              for (int s = roundUpToNextPowerOfTwo(divup(m_matrixRank, 2)); s > 0; s >>= 1) {
+              for (int s = reductionStart; s > 0; s >>= 1) {
 
                 if ((thread_idxx < s) && (thread_idxx + s) < m_matrixRank) {
                   // sh_mem[tid] += sh_mem[tid + s];
@@ -204,7 +205,7 @@ public class OnlineCFKernel implements Kernel {
               // Calculate score by summing up multiplications
               // do reduction in shared memory
               // 1-bit right shift = divide by two to the power 1
-              for (int s = roundUpToNextPowerOfTwo(divup(m_matrixRank, 2)); s > 0; s >>= 1) {
+              for (int s = reductionStart; s > 0; s >>= 1) {
 
                 if ((thread_idxx < s) && (thread_idxx + s) < m_matrixRank) {
                   // sh_mem[tid] += sh_mem[tid + s];
@@ -670,6 +671,13 @@ public class OnlineCFKernel implements Kernel {
 
         // Set testPreferences to all preferences
         testPreferences = preferences;
+
+        // Debug infos
+        double totalRatings = usersMatrix.size() * itemsMatrix.size();
+        double nonZeroValues = (preferences.size() / totalRatings) * 100;
+        System.out.println("ratings: " + preferences.size()
+            + " possibleRatings: " + (long) totalRatings);
+        System.out.println("percentNonZeroValues: " + nonZeroValues + "%");
 
       } catch (NumberFormatException e) {
         e.printStackTrace();
