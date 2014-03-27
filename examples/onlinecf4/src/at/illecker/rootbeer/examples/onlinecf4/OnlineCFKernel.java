@@ -82,7 +82,7 @@ public class OnlineCFKernel implements Kernel {
     int thread_idxx = RootbeerGpu.getThreadIdxx();
 
     if (blockSize < m_matrixRank) {
-      return; // TODO Error
+      return;
     }
 
     int usersPerBlock = divup(m_N, gridSize);
@@ -741,7 +741,8 @@ public class OnlineCFKernel implements Kernel {
         double nonZeroValues = (preferences.size() / totalRatings) * 100;
         System.out.println("ratings: " + preferences.size()
             + " possibleRatings: " + (long) totalRatings);
-        System.out.println("percentNonZeroValues: " + nonZeroValues + "%");
+        System.out.print("percentNonZeroValues: ");
+        System.out.format("%.2f%% %n", nonZeroValues);
 
       } catch (NumberFormatException e) {
         e.printStackTrace();
