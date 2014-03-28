@@ -1,0 +1,44 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="OnlineCF5.jar" />
+		<delete file="OnlineCF5-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="OnlineCF5.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.onlinecf5.OnlineCFKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF5.jar OnlineCF5-GPU.jar -64bit -noexceptions -noarraychecks -maxrregcount 40 -shared-mem-size 8204</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="OnlineCF5.jar" />
+			<arg value="OnlineCF5-GPU.jar" />
+			<arg value="-64bit" />
+			<arg value="-noexceptions" />
+			<arg value="-noarraychecks" />
+			<arg value="-maxrregcount 40" />
+			<arg value="-shared-mem-size 8204" />
+		</exec>
+		<echo>java -Xmx4G -jar OnlineCF5-GPU.jar 256 14 3 150 true</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="OnlineCF5-GPU.jar" />
+			<arg value="256" />
+			<arg value="14" />
+			<arg value="3" />
+			<arg value="150" />
+			<arg value="true" />
+		</exec>
+	</target>
+</project>
