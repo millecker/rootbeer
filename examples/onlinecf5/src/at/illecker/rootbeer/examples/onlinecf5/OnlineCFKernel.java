@@ -124,8 +124,6 @@ public class OnlineCFKernel implements Kernel {
           // Each user loops over all items which have a rating
           for (int itemId = 0; itemId < m_userHelper[userId][0]; itemId++) {
 
-            double expectedScore = m_userItemMatrix[userId][m_userHelper[userId][itemId]];
-
             // Each thread within a block computes one multiplication
             if (thread_idxx < m_matrixRank) {
               RootbeerGpu.setSharedDouble(shmMultVectorStartPos + thread_idxx
@@ -159,8 +157,10 @@ public class OnlineCFKernel implements Kernel {
             // Each thread does one update operation of vector u
             if (thread_idxx < m_matrixRank) {
               m_usersMatrix[userId][thread_idxx] += m_itemsMatrix[itemId][thread_idxx]
-                  * (2 * m_ALPHA * (expectedScore - RootbeerGpu
-                      .getSharedDouble(shmMultVectorStartPos)));
+                  * 2
+                  * m_ALPHA
+                  * (m_userItemMatrix[userId][m_userHelper[userId][itemId]] - RootbeerGpu
+                      .getSharedDouble(shmMultVectorStartPos));
             }
 
             // Sync all threads within a block
@@ -186,8 +186,6 @@ public class OnlineCFKernel implements Kernel {
 
           // Each user loops over all users which have a rating
           for (int userId = 0; userId < m_itemHelper[itemId][0]; userId++) {
-
-            double expectedScore = m_userItemMatrix[userId][m_itemHelper[itemId][userId]];
 
             // Each thread within a block computes one multiplication
             if (thread_idxx < m_matrixRank) {
@@ -222,8 +220,10 @@ public class OnlineCFKernel implements Kernel {
             // Each thread does one update operation of vector u
             if (thread_idxx < m_matrixRank) {
               m_itemsMatrix[itemId][thread_idxx] += m_usersMatrix[userId][thread_idxx]
-                  * (2 * m_ALPHA * (expectedScore - RootbeerGpu
-                      .getSharedDouble(shmMultVectorStartPos)));
+                  * 2
+                  * m_ALPHA
+                  * (m_userItemMatrix[userId][m_itemHelper[itemId][userId]] - RootbeerGpu
+                      .getSharedDouble(shmMultVectorStartPos));
             }
 
             // Sync all threads within a block
