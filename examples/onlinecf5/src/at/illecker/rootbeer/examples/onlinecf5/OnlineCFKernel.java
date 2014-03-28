@@ -122,56 +122,54 @@ public class OnlineCFKernel implements Kernel {
         if (userId < m_N) {
 
           // Each user loops over all items
+          // for (int itemId = 0; itemId < m_M; itemId++) {
           for (int itemId = 0; itemId < m_userHelper[userId][0]; itemId++) {
-            // for (int itemId = 0; itemId < m_M; itemId++) {
 
             double expectedScore = m_userItemMatrix[userId][m_userHelper[userId][itemId]];
             // double expectedScore = m_userItemMatrix[userId][itemId];
-//            if (expectedScore != 0) {
+            // if (expectedScore != 0) {
 
-              // Each thread within a block computes one multiplication
-              if (thread_idxx < m_matrixRank) {
+            // Each thread within a block computes one multiplication
+            if (thread_idxx < m_matrixRank) {
+              RootbeerGpu.setSharedDouble(shmMultVectorStartPos + thread_idxx
+                  * 8, m_usersMatrix[userId][thread_idxx]
+                  * m_itemsMatrix[itemId][thread_idxx]);
+            }
 
-                RootbeerGpu.setSharedDouble(shmMultVectorStartPos + thread_idxx
-                    * 8, m_usersMatrix[userId][thread_idxx]
-                    * m_itemsMatrix[itemId][thread_idxx]);
+            // Sync all threads within a block
+            RootbeerGpu.syncthreads();
+
+            // Calculate score by summing up multiplications
+            // do reduction in shared memory
+            // 1-bit right shift = divide by two to the power 1
+            for (int s = reductionStart; s > 0; s >>= 1) {
+
+              if ((thread_idxx < s) && (thread_idxx + s) < m_matrixRank) {
+                // sh_mem[tid] += sh_mem[tid + s];
+                RootbeerGpu.setSharedDouble(
+                    shmMultVectorStartPos + thread_idxx * 8,
+                    RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                        + thread_idxx * 8)
+                        + RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                            + (thread_idxx + s) * 8));
               }
 
               // Sync all threads within a block
               RootbeerGpu.syncthreads();
+            }
 
-              // Calculate score by summing up multiplications
-              // do reduction in shared memory
-              // 1-bit right shift = divide by two to the power 1
-              for (int s = reductionStart; s > 0; s >>= 1) {
+            // Calculate new userVector
+            // Each thread does one update operation of vector u
+            if (thread_idxx < m_matrixRank) {
+              m_usersMatrix[userId][thread_idxx] += m_itemsMatrix[itemId][thread_idxx]
+                  * (2 * m_ALPHA * (expectedScore - RootbeerGpu
+                      .getSharedDouble(shmMultVectorStartPos)));
+            }
 
-                if ((thread_idxx < s) && (thread_idxx + s) < m_matrixRank) {
-                  // sh_mem[tid] += sh_mem[tid + s];
-                  RootbeerGpu.setSharedDouble(
-                      shmMultVectorStartPos + thread_idxx * 8,
-                      RootbeerGpu.getSharedDouble(shmMultVectorStartPos
-                          + thread_idxx * 8)
-                          + RootbeerGpu.getSharedDouble(shmMultVectorStartPos
-                              + (thread_idxx + s) * 8));
-                }
+            // Sync all threads within a block
+            RootbeerGpu.syncthreads();
 
-                // Sync all threads within a block
-                RootbeerGpu.syncthreads();
-              }
-
-              // Calculate new userVector
-              // Each thread does one update operation of vector u
-              if (thread_idxx < m_matrixRank) {
-
-                m_usersMatrix[userId][thread_idxx] += m_itemsMatrix[itemId][thread_idxx]
-                    * (2 * m_ALPHA * (expectedScore - RootbeerGpu
-                        .getSharedDouble(shmMultVectorStartPos)));
-              }
-
-              // Sync all threads within a block
-              RootbeerGpu.syncthreads();
-
-         //   } // if expectedScore != 0
+            // } // if expectedScore != 0
 
           } // loop over all items
 
@@ -182,6 +180,73 @@ public class OnlineCFKernel implements Kernel {
       // Sync all blocks Inter-Block Synchronization
       RootbeerGpu.syncblocks(1);
 
+      // **********************************************************************
+      // Compute V (Items)
+      // **********************************************************************
+      // Loop over all itemsPerBlock
+      for (int v = 0; v < itemsPerBlock; v++) {
+
+        int itemId = (gridSize * v) + block_idxx;
+        if (itemId < m_M) {
+
+          // Each user loops over all items
+          // for (int userId = 0; userId < m_N; userId++) {
+          for (int userId = 0; userId < m_itemHelper[itemId][0]; userId++) {
+
+            double expectedScore = m_userItemMatrix[userId][m_itemHelper[itemId][userId]];
+            // double expectedScore = m_userItemMatrix[userId][itemId];
+            // if (expectedScore != 0) {
+
+            // Each thread within a block computes one multiplication
+            if (thread_idxx < m_matrixRank) {
+              RootbeerGpu.setSharedDouble(shmMultVectorStartPos + thread_idxx
+                  * 8, m_itemsMatrix[itemId][thread_idxx]
+                  * m_usersMatrix[userId][thread_idxx]);
+            }
+
+            // Sync all threads within a block
+            RootbeerGpu.syncthreads();
+
+            // Calculate score by summing up multiplications
+            // do reduction in shared memory
+            // 1-bit right shift = divide by two to the power 1
+            for (int s = reductionStart; s > 0; s >>= 1) {
+
+              if ((thread_idxx < s) && (thread_idxx + s) < m_matrixRank) {
+                // sh_mem[tid] += sh_mem[tid + s];
+                RootbeerGpu.setSharedDouble(
+                    shmMultVectorStartPos + thread_idxx * 8,
+                    RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                        + thread_idxx * 8)
+                        + RootbeerGpu.getSharedDouble(shmMultVectorStartPos
+                            + (thread_idxx + s) * 8));
+              }
+
+              // Sync all threads within a block
+              RootbeerGpu.syncthreads();
+            }
+
+            // Calculate new userVector
+            // Each thread does one update operation of vector u
+            if (thread_idxx < m_matrixRank) {
+              m_itemsMatrix[itemId][thread_idxx] += m_usersMatrix[userId][thread_idxx]
+                  * (2 * m_ALPHA * (expectedScore - RootbeerGpu
+                      .getSharedDouble(shmMultVectorStartPos)));
+            }
+
+            // Sync all threads within a block
+            RootbeerGpu.syncthreads();
+
+            // } // if expectedScore != 0
+
+          } // loop over all items
+
+        } // if (itemId < m_M)
+
+      } // loop over all itemsPerBlock
+
+      // Sync all blocks Inter-Block Synchronization
+      RootbeerGpu.syncblocks(2);
     }
   }
 
@@ -202,30 +267,6 @@ public class OnlineCFKernel implements Kernel {
     x |= x >> 16; // handle 32 bit numbers
     x++;
     return x;
-  }
-
-  private synchronized void debug(int idxx, int userId, int itemId,
-      double[] val1, double[] val2) {
-    System.out.print(idxx);
-    System.out.print(" userId: ");
-    System.out.print(userId);
-    System.out.print(" userVector: ");
-    System.out.println(arrayToString(val1));
-    System.out.print(idxx);
-    System.out.print(" itemId: ");
-    System.out.print(itemId);
-    System.out.print(" itemVector: ");
-    System.out.println(arrayToString(val2));
-  }
-
-  private synchronized void debug(int idxx, double val) {
-    System.out.print(idxx);
-    System.out.println(" sum: " + val);
-  }
-
-  private synchronized void debug(int idxx, double val1, double val2) {
-    System.out.print(idxx);
-    System.out.println(" " + val1 + " + " + val2);
   }
 
   private String arrayToString(double[] arr) {
@@ -634,30 +675,33 @@ public class OnlineCFKernel implements Kernel {
       Map<Long, Long> sortedUserRatingCount = sortByValues(userRatingCount);
       Map<Long, Long> sortedItemRatingCount = sortByValues(itemRatingCount);
 
-      // Convert preferences to double[][]
+      // Convert preferences to userItemMatrix double[][]
+      System.out.println("userItemMatrix: (m x n): " + usersMatrix.size()
+          + " x " + itemsMatrix.size());
       double[][] userItemMatrix = new double[usersMatrix.size()][itemsMatrix
           .size()];
       Map<Long, Integer> userItemMatrixUserRowMap = new HashMap<Long, Integer>();
       Map<Long, Integer> userItemMatrixItemColMap = new HashMap<Long, Integer>();
-
       // Create userHelper to int[][]
       // userHelper[userId][0] = userRatingCount
       // userHelper[userId][1] = colId of userItemMatrix
       int[][] userHelper = null;
+      // Create itemHelper to int[][]
+      // itemHelper[itemId][0] = itemRatingCount
+      // itemHelper[userId][1] = colId of userItemMatrix
       int[][] itemHelper = null;
-
-      System.out.println("userItemMatrix: (m x n): " + usersMatrix.size()
-          + " x " + itemsMatrix.size());
+      Map<Long, Integer> itemHelperId = new HashMap<Long, Integer>();
 
       int rowId = 0;
       for (Long userId : sortedUserRatingCount.keySet()) {
-        // Add to userItemMatrixUserRowMap
+        // Map userId to rowId in userItemMatrixUserRowMap
         userItemMatrixUserRowMap.put(userId, rowId);
 
-        // Add userHelper
+        // Setup userHelper
         if (userHelper == null) {
-          userHelper = new int[sortedUserRatingCount.size()][sortedUserRatingCount
-              .get(userId).intValue() + 1];
+          // Todo sortedUserRatingCount.size()
+          userHelper = new int[usersMatrix.size()][sortedUserRatingCount.get(
+              userId).intValue() + 1];
         }
         userHelper[rowId][0] = sortedUserRatingCount.get(userId).intValue();
 
@@ -670,30 +714,58 @@ public class OnlineCFKernel implements Kernel {
             userItemMatrixItemColMap.put(itemId, colId);
           }
 
+          // Setup itemHelper
+          if (itemHelper == null) {
+            // Todo sortedItemRatingCount.size()
+            itemHelper = new int[itemsMatrix.size()][sortedItemRatingCount.get(
+                itemId).intValue() + 1];
+          }
+          itemHelper[colId][0] = sortedItemRatingCount.get(itemId).intValue();
+
           if (preferencesMap.get(userId).containsKey(itemId)) {
+            // Add userItemMatrix
             userItemMatrix[rowId][colId] = preferencesMap.get(userId).get(
                 itemId);
 
             // Add userHelper
             userHelper[rowId][userHelperId] = colId;
             userHelperId++;
+
+            // Add itemHelper
+            if (itemHelperId.containsKey(itemId)) {
+              int idx = itemHelperId.get(itemId);
+              itemHelper[colId][idx] = rowId;
+              itemHelperId.put(itemId, idx + 1);
+            } else {
+              itemHelper[colId][1] = rowId;
+              itemHelperId.put(itemId, 2);
+            }
+
           }
 
           colId++;
         }
 
-        // Debug
+        // Debug userItemMatrix
         if ((isDebbuging) && (rowId < debugLines)) {
-          System.out.println("userItemMatrix userId: "
-              + userId
-              + " row["
-              + rowId
-              + "]: "
-              + Arrays.toString(Arrays.copyOfRange(userItemMatrix[rowId], 0,
-                  Math.min(itemsMatrix.size(), debugLines))) + " userRatings: "
-              + sortedUserRatingCount.get(userId));
+          System.out.println("userItemMatrix userId: " + userId + " row["
+              + rowId + "]: " + Arrays.toString(userItemMatrix[rowId])
+              + " userRatings: " + sortedUserRatingCount.get(userId));
         }
         rowId++;
+      }
+
+      if (isDebbuging) {
+        // Debug userHelper
+        for (int i = 0; i < Math.min(usersMatrix.size(), debugLines); i++) {
+          System.out.println("userHelper row " + i + ": "
+              + Arrays.toString(userHelper[i]));
+        }
+        // Debug itemHelper
+        for (int i = 0; i < Math.min(itemsMatrix.size(), debugLines); i++) {
+          System.out.println("itemHelper row " + i + ": "
+              + Arrays.toString(itemHelper[i]));
+        }
       }
 
       // Convert usersMatrix to double[][]
