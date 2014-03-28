@@ -121,13 +121,10 @@ public class OnlineCFKernel implements Kernel {
         int userId = (gridSize * u) + block_idxx;
         if (userId < m_N) {
 
-          // Each user loops over all items
-          // for (int itemId = 0; itemId < m_M; itemId++) {
+          // Each user loops over all items which have a rating
           for (int itemId = 0; itemId < m_userHelper[userId][0]; itemId++) {
 
             double expectedScore = m_userItemMatrix[userId][m_userHelper[userId][itemId]];
-            // double expectedScore = m_userItemMatrix[userId][itemId];
-            // if (expectedScore != 0) {
 
             // Each thread within a block computes one multiplication
             if (thread_idxx < m_matrixRank) {
@@ -169,9 +166,7 @@ public class OnlineCFKernel implements Kernel {
             // Sync all threads within a block
             RootbeerGpu.syncthreads();
 
-            // } // if expectedScore != 0
-
-          } // loop over all items
+          } // loop over all items which have a rating
 
         } // if userId < m_N
 
@@ -189,13 +184,10 @@ public class OnlineCFKernel implements Kernel {
         int itemId = (gridSize * v) + block_idxx;
         if (itemId < m_M) {
 
-          // Each user loops over all items
-          // for (int userId = 0; userId < m_N; userId++) {
+          // Each user loops over all users which have a rating
           for (int userId = 0; userId < m_itemHelper[itemId][0]; userId++) {
 
             double expectedScore = m_userItemMatrix[userId][m_itemHelper[itemId][userId]];
-            // double expectedScore = m_userItemMatrix[userId][itemId];
-            // if (expectedScore != 0) {
 
             // Each thread within a block computes one multiplication
             if (thread_idxx < m_matrixRank) {
@@ -237,9 +229,7 @@ public class OnlineCFKernel implements Kernel {
             // Sync all threads within a block
             RootbeerGpu.syncthreads();
 
-            // } // if expectedScore != 0
-
-          } // loop over all items
+          } // loop over all users which have a rating
 
         } // if (itemId < m_M)
 
@@ -676,6 +666,8 @@ public class OnlineCFKernel implements Kernel {
       Map<Long, Long> sortedItemRatingCount = sortByValues(itemRatingCount);
 
       // Convert preferences to userItemMatrix double[][]
+      // TODO Skip zero rows and cols
+      // sortedUserRatingCount.size() x sortedItemRatingCount.size()
       System.out.println("userItemMatrix: (m x n): " + usersMatrix.size()
           + " x " + itemsMatrix.size());
       double[][] userItemMatrix = new double[usersMatrix.size()][itemsMatrix
@@ -688,18 +680,19 @@ public class OnlineCFKernel implements Kernel {
       int[][] userHelper = null;
       // Create itemHelper to int[][]
       // itemHelper[itemId][0] = itemRatingCount
-      // itemHelper[userId][1] = colId of userItemMatrix
+      // itemHelper[userId][1] = rowId of userItemMatrix
       int[][] itemHelper = null;
       Map<Long, Integer> itemHelperId = new HashMap<Long, Integer>();
 
       int rowId = 0;
       for (Long userId : sortedUserRatingCount.keySet()) {
+
         // Map userId to rowId in userItemMatrixUserRowMap
         userItemMatrixUserRowMap.put(userId, rowId);
 
         // Setup userHelper
         if (userHelper == null) {
-          // Todo sortedUserRatingCount.size()
+          // TODO sortedUserRatingCount.size()
           userHelper = new int[usersMatrix.size()][sortedUserRatingCount.get(
               userId).intValue() + 1];
         }
@@ -709,14 +702,14 @@ public class OnlineCFKernel implements Kernel {
         int userHelperId = 1;
         for (Long itemId : sortedItemRatingCount.keySet()) {
 
-          // Add to userItemMatrixItemColMap
+          // Map itemId to colId in userItemMatrixItemColMap
           if (rowId == 0) {
             userItemMatrixItemColMap.put(itemId, colId);
           }
 
           // Setup itemHelper
           if (itemHelper == null) {
-            // Todo sortedItemRatingCount.size()
+            // TODO sortedItemRatingCount.size()
             itemHelper = new int[itemsMatrix.size()][sortedItemRatingCount.get(
                 itemId).intValue() + 1];
           }
@@ -757,11 +750,13 @@ public class OnlineCFKernel implements Kernel {
 
       if (isDebbuging) {
         // Debug userHelper
+        // TODO sortedUserRatingCount.size()
         for (int i = 0; i < Math.min(usersMatrix.size(), debugLines); i++) {
           System.out.println("userHelper row " + i + ": "
               + Arrays.toString(userHelper[i]));
         }
         // Debug itemHelper
+        // TODO sortedItemRatingCount.size()
         for (int i = 0; i < Math.min(itemsMatrix.size(), debugLines); i++) {
           System.out.println("itemHelper row " + i + ": "
               + Arrays.toString(itemHelper[i]));
