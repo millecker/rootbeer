@@ -8,15 +8,15 @@
 	<classpathentry kind="src" path="examples/onlinecf4/src"/>
 	<classpathentry kind="src" path="examples/onlinecf5/src"/>
 	<classpathentry kind="src" path="examples/piestimator/src"/>
-	<classpathentry kind="src" path="examples/test2keymap/src"/>
-	<classpathentry kind="src" path="examples/testdoublearray/src"/>
-	<classpathentry kind="src" path="examples/testmap/src"/>
-	<classpathentry kind="src" path="examples/testmap1/src"/>
-	<classpathentry kind="src" path="examples/testmap2/src"/>
-	<classpathentry kind="src" path="examples/testmap3/src"/>
-	<classpathentry kind="src" path="examples/testprintln/src"/>
-	<classpathentry kind="src" path="examples/teststringbuilder/src"/>
-	<classpathentry kind="src" path="examples/testsyncblocks/src"/>
+	<classpathentry kind="src" path="tests/test2keymap/src"/>
+	<classpathentry kind="src" path="tests/testdoublearray/src"/>
+	<classpathentry kind="src" path="tests/testmap/src"/>
+	<classpathentry kind="src" path="tests/testmap1/src"/>
+	<classpathentry kind="src" path="tests/testmap2/src"/>
+	<classpathentry kind="src" path="tests/testmap3/src"/>
+	<classpathentry kind="src" path="tests/testprintln/src"/>
+	<classpathentry kind="src" path="tests/teststringbuilder/src"/>
+	<classpathentry kind="src" path="tests/testsyncblocks/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="rootbeer-develop-branch.jar"/>
 	<classpathentry kind="output" path="bin"/>
