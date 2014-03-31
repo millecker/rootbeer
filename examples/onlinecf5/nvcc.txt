@@ -1,55 +1,51 @@
 #############################################################################################
-2) OnlineCF4
+1) OnlineCF5
 #############################################################################################
 
-BlockSize: 256
-SharedMemory: 12 + 256 * 8 * 3 = 6156 bytes
- a) Registers: 43 (8 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads)
-    Registers: -maxrregcount 40 (16 bytes stack frame, 4 bytes spill stores, 12 bytes spill loads)
+BlockSize: 1024
+SharedMemory: 12 + 1024 * 8 = 8204 bytes
+ a) Registers: 40 (8 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads)
  b) Registers: -maxrregcount 32 (24 bytes stack frame, 20 bytes spill stores, 20 bytes spill loads)
 
 #############################################################################################
 
 a) without any configuration
-$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF4.jar OnlineCF4-GPU.jar \
+$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF5.jar OnlineCF5-GPU.jar \
    -64bit -noexceptions -noarraychecks
-$ java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 256 10 false false false 0.001 0 0 0 \
+$ java -Xmx4G -jar OnlineCF5-GPU.jar 1024 14 1024 10 false false false 0.001 0 0 0 \
    /home/martin/Downloads/ml-1m/ratings.dat ::
 
   StatsRow:
-    serial time: 107
-    exec time: 50422
-    deserial time: 57
-    num blocks: 14
-    num threads: 256
-GPU Time: 50590 ms
-
-$ java -Xmx4G -jar OnlineCF4-GPU.jar 1024 14 1024 10 false false false 0.001 0 0 0 \
-   /home/martin/Downloads/ml-1m/ratings.dat ::
-
-  StatsRow:
-    serial time: 131
-    exec time: 57324
-    deserial time: 65
+    serial time: 188
+    exec time: 25135
+    deserial time: 92
     num blocks: 14
     num threads: 1024
-GPU Time: 57524 ms
+GPU Time: 25708 ms
 
 #############################################################################################
 
 b) Registers: 32
-$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF4.jar OnlineCF4-GPU.jar \
-   -64bit -noexceptions -noarraychecks -maxrregcount 32 -shared-mem-size 6156
-$ java -Xmx4G -jar OnlineCF4-GPU.jar 256 14 256 10 false false false 0.001 0 0 0 \
+$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF5.jar OnlineCF5-GPU.jar \
+   -64bit -noexceptions -noarraychecks -maxrregcount 32 -shared-mem-size 8204
+$ java -Xmx4G -jar OnlineCF5-GPU.jar 1024 14 1024 10 false false false 0.001 0 0 0 \
    /home/martin/Downloads/ml-1m/ratings.dat ::
 
   StatsRow:
-    serial time: 107
-    exec time: 50316
-    deserial time: 57
+    serial time: 186
+    exec time: 25116
+    deserial time: 93
     num blocks: 14
-    num threads: 256
-GPU Time: 50483 ms
+    num threads: 1024
+GPU Time: 25688 ms
+
+#############################################################################################
+
+CPU
+$ java -Xmx4G -jar OnlineCF5-GPU.jar 1024 14 1024 10 false true false 0.001 0 0 0 \
+   /home/martin/Downloads/ml-1m/ratings.dat ::
+
+CPU Time: 40114 ms
 
 #############################################################################################
 
@@ -59,6 +55,6 @@ ptxas info    : 142 bytes gmem, 64 bytes cmem[14]
 ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_20'
 ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
     8 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-ptxas info    : Used 43 registers, 40984 bytes smem, 116 bytes cmem[0]
+ptxas info    : Used 40 registers, 40984 bytes smem, 116 bytes cmem[0]
 
 #############################################################################################
