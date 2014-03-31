@@ -14,6 +14,7 @@
 	<classpathentry kind="src" path="tests/testmap1/src"/>
 	<classpathentry kind="src" path="tests/testmap2/src"/>
 	<classpathentry kind="src" path="tests/testmap3/src"/>
+	<classpathentry kind="src" path="tests/testnumbertostring/src"/>
 	<classpathentry kind="src" path="tests/testprintln/src"/>
 	<classpathentry kind="src" path="tests/teststringbuilder/src"/>
 	<classpathentry kind="src" path="tests/testsyncblocks/src"/>
