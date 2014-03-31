@@ -11,7 +11,7 @@
 	<target name="jar" depends="compile">
 		<jar destfile="TestMap2.jar" basedir="build/classes">
 			<manifest>
-				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.testmap2.TestMap2Kernel" />
+				<attribute name="Main-Class" value="at.illecker.rootbeer.tests.testmap2.TestMap2Kernel" />
 			</manifest>
 		</jar>
 	</target>

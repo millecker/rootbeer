@@ -11,7 +11,7 @@
 	<target name="jar" depends="compile">
 		<jar destfile="TestStringBuilder.jar" basedir="build/classes">
 			<manifest>
-				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.teststringbuilder.TestStringBuilderKernel" />
+				<attribute name="Main-Class" value="at.illecker.rootbeer.tests.teststringbuilder.TestStringBuilderKernel" />
 			</manifest>
 		</jar>
 	</target>

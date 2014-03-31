@@ -1,20 +1,38 @@
-<project>
-	<property name="root" value="../.." />
-	<property name="rootbeer.version" value="rootbeer-develop-branch.jar" />
-	<property name="rootbeer.args" value="-64bit" />
-	<property name="output.file" value="TestNumberToString" />
-	<property name="libjars.gpu" value="" />
-	<property name="libjars.cpu" value="" />
-	<property name="libjars.bench" value="" />
-	<property name="rootbeer.package.dir" value="at/illecker/rootbeer/examples/testnumbertostring" />
-	<property name="rootbeer.classes" value="TestNumberToStringKernel.class" />
-	<property name="kernel.class" value="at.illecker.rootbeer.examples.testnumbertostring.TestNumberToStringKernel" />
-	<property name="gpu.class" value="" />
-	<property name="cpu.class" value="" />
-	<property name="bench.class" value="" />
-	<property name="program" value="java" />
-	<property name="program.args" value="jar" />
-	<property name="application.args" value="blockSize gridSize" />
-
-	<import file="${root}${file.separator}commonbuild.xml" />
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="TestNumberToString.jar" />
+		<delete file="TestNumberToString-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="TestNumberToString.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.tests.testnumbertostring.TestNumberToStringKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar TestNumberToString.jar TestNumberToString-GPU.jar -noexceptions -64bit</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="TestNumberToString.jar" />
+			<arg value="TestNumberToString-GPU.jar" />
+			<arg value="-noexceptions" />
+			<arg value="-64bit" />
+		</exec>
+		<echo>java -Xmx4G -jar TestNumberToString-GPU.jar 1 2</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="TestNumberToString-GPU.jar" />
+			<arg value="1" />
+			<arg value="2" />
+		</exec>
+	</target>
 </project>
