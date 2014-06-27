@@ -28,9 +28,9 @@ import org.trifort.rootbeer.runtime.util.Stopwatch;
 
 public class PiEstimatorKernel implements Kernel {
 
-  private long m_iterations;
-  private long m_seed;
-  public ResultList m_resultList;
+  private long m_iterations; // input
+  private long m_seed; // input
+  public ResultList m_resultList; // output
 
   public PiEstimatorKernel(long iterations, long seed) {
     this.m_iterations = iterations;
@@ -39,57 +39,71 @@ public class PiEstimatorKernel implements Kernel {
   }
 
   public void gpuMethod() {
-
     int thread_idxx = RootbeerGpu.getThreadIdxx();
+    int globalThreadId = RootbeerGpu.getThreadIdxx()
+        + RootbeerGpu.getBlockIdxx() * RootbeerGpu.getBlockDimx();
+    int reductionStart = roundUpToNextPowerOfTwo(divup(
+        RootbeerGpu.getBlockDimx(), 2));
+
     LinearCongruentialRandomGenerator lcg = new LinearCongruentialRandomGenerator(
-        m_seed / RootbeerGpu.getThreadId());
+        m_seed / globalThreadId);
 
     long hits = 0;
     for (int i = 0; i < m_iterations; i++) {
       double x = 2.0 * lcg.nextDouble() - 1.0; // value between -1 and 1
       double y = 2.0 * lcg.nextDouble() - 1.0; // value between -1 and 1
-
-      if ((Math.sqrt(x * x + y * y) < 1.0)) {
+      if ((x * x + y * y) <= 1.0) {
         hits++;
       }
     }
 
-    // write hits to shared memory
+    // write to shared memory
     RootbeerGpu.setSharedLong(thread_idxx * 8, hits);
     RootbeerGpu.syncthreads();
 
     // do reduction in shared memory
     // 1-bit right shift = divide by two to the power 1
-    for (int s = RootbeerGpu.getBlockDimx() / 2; s > 0; s >>= 1) {
-
+    for (int s = reductionStart; s > 0; s >>= 1) {
       if (thread_idxx < s) {
-        // sh_mem[ltid] += sh_mem[ltid + s];
-        long val1 = RootbeerGpu.getSharedLong(thread_idxx * 8);
-        long val2 = RootbeerGpu.getSharedLong((thread_idxx + s) * 8);
-        RootbeerGpu.setSharedLong(thread_idxx * 8, val1 + val2);
+        // sh_mem[tid] += sh_mem[tid + s];
+        RootbeerGpu.setSharedLong(
+            thread_idxx * 8,
+            RootbeerGpu.getSharedLong(thread_idxx * 8)
+                + RootbeerGpu.getSharedLong((thread_idxx + s) * 8));
       }
-
+      // Sync all threads within a block
       RootbeerGpu.syncthreads();
     }
 
-    // thread 0 of each block adds result
     if (thread_idxx == 0) {
       Result result = new Result();
       result.hits = RootbeerGpu.getSharedLong(thread_idxx * 8);
       m_resultList.add(result);
     }
+
+    RootbeerGpu.syncblocks(1);
+  }
+
+  private int divup(int x, int y) {
+    if (x % y != 0) {
+      return ((x + y - 1) / y); // round up
+    } else {
+      return x / y;
+    }
+  }
+
+  private int roundUpToNextPowerOfTwo(int x) {
+    x--;
+    x |= x >> 1; // handle 2 bit numbers
+    x |= x >> 2; // handle 4 bit numbers
+    x |= x >> 4; // handle 8 bit numbers
+    x |= x >> 8; // handle 16 bit numbers
+    x |= x >> 16; // handle 32 bit numbers
+    x++;
+    return x;
   }
 
   public static void main(String[] args) {
-    // nvcc ~/.rootbeer/generated.cu --ptxas-options=-v -arch sm_35
-    // ptxas info : Used 39 registers, 40984 bytes smem, 380 bytes cmem[0], 88
-    // bytes cmem[2]
-
-    // using -maxrregcount 32
-    // using -shared-mem-size 1024*8 + 12 = 8192 + 12 = 8204
-    // BlockSize = 1024
-    // GridSize = 14
-
     long calculationsPerThread = 100000;
     int blockSize = 1024; // threads
     int gridSize = 14; // blocks
@@ -121,9 +135,14 @@ public class PiEstimatorKernel implements Kernel {
 
     // Get GPU results
     long totalHits = 0;
-    List<Result> resultList = kernel.m_resultList.getList();
+    long resultCounter = 0;
+    Result[] resultList = kernel.m_resultList.getList();
     for (Result result : resultList) {
+      if (result == null) { // break at end of list
+        break;
+      }
       totalHits += result.hits;
+      resultCounter++;
     }
 
     double result = 4.0 * totalHits
@@ -142,7 +161,7 @@ public class PiEstimatorKernel implements Kernel {
     System.out.println("Pi: " + result);
     System.out.println("totalHits: " + totalHits);
     System.out.println("calculationsPerThread: " + calculationsPerThread);
-    System.out.println("results: " + resultList.size());
+    System.out.println("results: " + resultCounter);
     System.out.println("calculationsTotal: " + calculationsPerThread
         * blockSize * gridSize);
   }
