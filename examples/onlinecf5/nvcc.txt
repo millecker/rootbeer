@@ -2,42 +2,33 @@
 1) OnlineCF5
 #############################################################################################
 
-BlockSize: 1024
-SharedMemory: 12 + 1024 * 8 = 8204 bytes
- a) Registers: 40 (8 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads)
- b) Registers: -maxrregcount 32 (24 bytes stack frame, 20 bytes spill stores, 20 bytes spill loads)
-
-#############################################################################################
-
-a) without any configuration
 $ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF5.jar OnlineCF5-GPU.jar \
-   -64bit -noexceptions -noarraychecks
+   -64bit -noexceptions -noarraychecks -shared-mem-size 8204
+
 $ java -Xmx4G -jar OnlineCF5-GPU.jar 1024 14 1024 10 false false false 0.001 0 0 0 \
    /home/martin/Downloads/ml-1m/ratings.dat ::
 
+useCPU: false
+blockSize: 1024
+gridSize: 14
+matrixRank: 1024
+maxIterations: 10
+ALPHA: 0.0010
+inputFile: /home/martin/Downloads/ml-1m/ratings.dat
+separator: '::'
+ratings: 1000209 possibleRatings: 22384240
+percentNonZeroValues: 4,47% 
+userItemMatrix: (m x n): 6040 x 3706
+userMatrix: length: 6040
+itemMatrix: length: 3706
+Run on GPU
   StatsRow:
-    serial time: 188
-    exec time: 25135
-    deserial time: 92
+    serial time: 185
+    exec time: 28058
+    deserial time: 95
     num blocks: 14
     num threads: 1024
-GPU Time: 25708 ms
-
-#############################################################################################
-
-b) Registers: 32
-$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar OnlineCF5.jar OnlineCF5-GPU.jar \
-   -64bit -noexceptions -noarraychecks -maxrregcount 32 -shared-mem-size 8204
-$ java -Xmx4G -jar OnlineCF5-GPU.jar 1024 14 1024 10 false false false 0.001 0 0 0 \
-   /home/martin/Downloads/ml-1m/ratings.dat ::
-
-  StatsRow:
-    serial time: 186
-    exec time: 25116
-    deserial time: 93
-    num blocks: 14
-    num threads: 1024
-GPU Time: 25688 ms
+GPU Time: 28619 ms
 
 #############################################################################################
 
@@ -45,16 +36,24 @@ CPU
 $ java -Xmx4G -jar OnlineCF5-GPU.jar 1024 14 1024 10 false true false 0.001 0 0 0 \
    /home/martin/Downloads/ml-1m/ratings.dat ::
 
-CPU Time: 40114 ms
+CPU Time: 40298 ms
 
 #############################################################################################
 
 $ nvcc generated.cu --ptxas-options=-v -arch sm_20
 
-ptxas info    : 142 bytes gmem, 64 bytes cmem[14]
+ptxas info    : 150 bytes gmem, 72 bytes cmem[14]
 ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_20'
 ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
     8 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
-ptxas info    : Used 40 registers, 40984 bytes smem, 116 bytes cmem[0]
+ptxas info    : Used 38 registers, 40984 bytes smem, 116 bytes cmem[0]
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_35
+
+ptxas info    : 150 bytes gmem
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_35'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
+    8 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 49 registers, 40984 bytes smem, 404 bytes cmem[0]
 
 #############################################################################################
