@@ -26,13 +26,13 @@
 			<arg value="-noexceptions" />
 			<arg value="-64bit" />
 		</exec>
-		<echo>java -Xmx4G -jar TestNumberToString-GPU.jar 1 2</echo>
+		<echo>java -Xmx4G -jar TestNumberToString-GPU.jar 1 1</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
 			<arg value="TestNumberToString-GPU.jar" />
 			<arg value="1" />
-			<arg value="2" />
+			<arg value="1" />
 		</exec>
 	</target>
 </project>
