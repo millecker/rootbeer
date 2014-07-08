@@ -1,5 +1,5 @@
 ###############################################################################
-##### TestMap3 Example                                                    #####
+##### TestMap4 Example                                                    #####
 ###############################################################################
 
 # Use Apache Ant to build and run example
@@ -11,8 +11,6 @@ ant clean
 ant run
 
  # Run GPU Kernel
-# java -Xmx4G -jar TestMap3-GPU.jar [-DblockSize=2 -DgridSize=1]
-
-# java -Xmx4G -jar TestMap3-GPU.jar 2 1
+# java -Xmx4G -jar TestMap4-GPU.jar
 
 ###############################################################################
