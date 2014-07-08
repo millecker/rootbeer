@@ -83,8 +83,7 @@ public final class GpuIntegerMap {
     int bucketIndex = indexForKey(key);
     GpuIntegerPair entry = m_values[bucketIndex];
     if (entry != null) {
-      int val = (Integer) entry.getValue();
-      entry.setValue(val + value);
+      entry.setValue(entry.getValue() + value);
     } else {
       m_values[bucketIndex] = new GpuIntegerPair(key, value);
     }
