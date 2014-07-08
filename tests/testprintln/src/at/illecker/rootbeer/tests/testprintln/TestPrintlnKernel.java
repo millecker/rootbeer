@@ -72,8 +72,8 @@ public class TestPrintlnKernel implements Kernel {
     int blockSize = BLOCK_SIZE;
     int gridSize = GRID_SIZE;
     Random rand = new Random();
-    int N = 69878;
-    int M = 10677;
+    int N = 16500;
+    int M = 1000; // TODO java.lang.OutOfMemoryError when M=1500
 
     // parse arguments
     if ((args.length > 0) && (args.length == 2)) {
