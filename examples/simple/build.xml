@@ -1,0 +1,39 @@
+<project default="jar">
+	<target name="clean">
+		<delete dir="build" />
+		<delete file="SimpleExample.jar" />
+		<delete file="SimpleExample-GPU.jar" />
+	</target>
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+	</target>
+	<target name="jar" depends="compile">
+		<jar destfile="SimpleExample.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="at.illecker.rootbeer.examples.simple.SimpleKernel" />
+			</manifest>
+		</jar>
+	</target>
+	<target name="run" depends="jar">
+		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar SimpleExample.jar SimpleExample-GPU.jar -64bit -noexceptions -shared-mem-size 8204</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="SimpleExample.jar" />
+			<arg value="SimpleExample-GPU.jar" />
+			<arg value="-64bit" />
+			<arg value="-noexceptions" />
+			<arg value="-shared-mem-size 8204" />
+		</exec>
+		<echo>java -Xmx4G -jar SimpleExample-GPU.jar 2 1</echo>
+		<exec executable="java">
+			<arg value="-Xmx4G" />
+			<arg value="-jar" />
+			<arg value="SimpleExample-GPU.jar" />
+			<arg value="2" />
+			<arg value="1" />
+		</exec>
+	</target>
+</project>

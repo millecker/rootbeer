@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="src" path="examples/simple/src"/>
 	<classpathentry kind="src" path="examples/matrixmultiplication1/src"/>
 	<classpathentry kind="src" path="examples/matrixmultiplication2/src"/>
 	<classpathentry kind="src" path="examples/onlinecf/src"/>
