@@ -23,7 +23,7 @@ import org.trifort.rootbeer.runtime.RootbeerGpu;
 import org.trifort.rootbeer.runtime.ThreadConfig;
 
 public class SimpleKernel implements Kernel {
-  public int[] memory;
+  private int[] memory;
 
   public SimpleKernel(int[] memory) {
     this.memory = memory;
@@ -54,11 +54,12 @@ public class SimpleKernel implements Kernel {
     }
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
-    SimpleKernel kernel = new SimpleKernel(new int[blockSize * gridSize]);
+    int[] memory = new int[blockSize * gridSize];
+    SimpleKernel kernel = new SimpleKernel(memory);
     rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
         * gridSize), context);
-    for (int i = 0; i < kernel.memory.length; i++) {
-      System.out.println("Kernel: " + i + " has index: " + kernel.memory[i]);
+    for (int i = 0; i < memory.length; i++) {
+      System.out.println("Kernel: " + i + " has index: " + memory[i]);
     }
   }
 }
