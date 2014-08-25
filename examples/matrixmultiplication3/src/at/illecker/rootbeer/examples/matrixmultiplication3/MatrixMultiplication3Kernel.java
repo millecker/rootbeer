@@ -33,17 +33,97 @@ public class MatrixMultiplication3Kernel implements Kernel {
   private double[][] m_matrixB;
 
   // output
-  public double[][] resultMatrix;
+  public double[][] m_resultMatrix;
+
+  // temp
+  private int m_N;
+  private int m_M;
+  private int m_L;
 
   public MatrixMultiplication3Kernel(double[][] matrixA, double[][] matrixB) {
     m_matrixA = matrixA;
     m_matrixB = matrixB;
+    m_N = m_matrixA.length;
+    m_M = m_matrixA[0].length;
+    m_L = m_matrixB[0].length;
+    m_resultMatrix = new double[m_N][m_L];
   }
 
   public void gpuMethod() {
-    int threadId = RootbeerGpu.getThreadIdxx();
-    int blockId = RootbeerGpu.getBlockIdxx();
+    int blockSize = RootbeerGpu.getBlockDimx();
+    int gridSize = RootbeerGpu.getGridDimx();
+    int block_idxx = RootbeerGpu.getBlockIdxx();
+    int thread_idxx = RootbeerGpu.getThreadIdxx();
 
+    // A block handles a column and
+    // each thread within this block takes one row
+
+    int columnsPerBlock = divup(m_M, gridSize);
+    int reductionStart = roundUpToNextPowerOfTwo(divup(blockSize, 2));
+
+    // Loop over all columns of matrixA
+    for (int i = 0; i < columnsPerBlock; i++) {
+
+      int colId = (gridSize * i) + block_idxx;
+      if (colId < m_M) {
+
+        // Loop over all columns of matrixB
+        for (int j = 0; j < m_L; j++) {
+
+          if (thread_idxx < m_M) {
+            RootbeerGpu.setSharedDouble(thread_idxx,
+                m_matrixA[colId][thread_idxx] * m_matrixB[j][thread_idxx]);
+          }
+
+          // Sync all threads within a block
+          RootbeerGpu.syncthreads();
+
+          // do reduction in shared memory
+          // 1-bit right shift = divide by two to the power 1
+          for (int s = reductionStart; s > 0; s >>= 1) {
+
+            if ((thread_idxx < s) && (thread_idxx + s) < blockSize) {
+              // sh_mem[tid] += sh_mem[tid + s];
+              RootbeerGpu.setSharedDouble(
+                  thread_idxx * 8,
+                  RootbeerGpu.getSharedDouble(thread_idxx * 8)
+                      + RootbeerGpu.getSharedDouble((thread_idxx + s) * 8));
+            }
+
+            // Sync all threads within a block
+            RootbeerGpu.syncthreads();
+          }
+
+          if (thread_idxx == 0) {
+            m_resultMatrix[j][colId] = RootbeerGpu.getSharedDouble(0);
+          }
+
+          // Sync all threads within a block
+          RootbeerGpu.syncthreads();
+        }
+      }
+
+    }
+
+  }
+
+  private int divup(int x, int y) {
+    if (x % y != 0) {
+      return ((x + y - 1) / y); // round up
+    } else {
+      return x / y;
+    }
+  }
+
+  private int roundUpToNextPowerOfTwo(int x) {
+    x--;
+    x |= x >> 1; // handle 2 bit numbers
+    x |= x >> 2; // handle 4 bit numbers
+    x |= x >> 4; // handle 8 bit numbers
+    x |= x >> 8; // handle 16 bit numbers
+    x |= x >> 16; // handle 32 bit numbers
+    x++;
+    return x;
   }
 
   public static void main(String[] args) {
@@ -102,8 +182,8 @@ public class MatrixMultiplication3Kernel implements Kernel {
     watch.stop();
 
     // Get GPU Result
-    // double[] matrixC = kernel.resultMatrix.matrix;
-    // double[] matrixD = multiply(matrixA, matrixB, n, n, n);
+    double[][] matrixC = kernel.m_resultMatrix;
+    double[][] matrixD = multiply(matrixA, matrixB);
 
     // Debug
     List<StatsRow> stats = context.getStats();
@@ -117,34 +197,18 @@ public class MatrixMultiplication3Kernel implements Kernel {
     }
     System.out.println("GPUTime: " + watch.elapsedTimeMillis() + "ms");
 
-    /*
-     * boolean verifyResult = verify(matrixC, matrixD, n, n); if (verifyResult)
-     * { System.out.println("Verify PASSED!"); } else {
-     * System.out.println("Verify FAILED!"); } if (isDebugging) {
-     * System.out.println("MatrixC"); printArray(matrixC, n, n);
-     * System.out.println("MatrixD"); printArray(matrixD, n, n); }
-     */
-  }
-
-  static double[] createConstantArray(int n, int m, double value) {
-    final double data[] = new double[n * m];
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
-        data[j * m + i] = value;
-      }
+    boolean verifyResult = verify(matrixC, matrixD);
+    if (verifyResult) {
+      System.out.println("Verify PASSED!");
+    } else {
+      System.out.println("Verify FAILED!");
     }
-    return data;
-  }
-
-  static double[] createRandomArray(int n, int m, Random rand) {
-    final double data[] = new double[n * m];
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
-        // matrix[i][j] = rand.nextDouble();
-        data[j * m + j] = rand.nextInt(9) + 1; // between 1 and 10
-      }
+    if (isDebugging) {
+      System.out.println("MatrixC");
+      printMatrix(matrixC);
+      System.out.println("MatrixD");
+      printMatrix(matrixD);
     }
-    return data;
   }
 
   static double[][] createRandomMatrix(int n, int m, Random rand) {
@@ -170,21 +234,6 @@ public class MatrixMultiplication3Kernel implements Kernel {
     return transposedMatrix;
   }
 
-  static void printArray(double[] data, int n, int m) {
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
-        if (i == m - 1) {
-          System.out.println(data[j * m + i] + "]");
-        } else if (i == 0) {
-          System.out.print("[" + data[j * m + i] + ",");
-        } else {
-          System.out.print(data[j * m + i] + ",");
-        }
-      }
-    }
-    System.out.println();
-  }
-
   static void printMatrix(double[][] matrix) {
     int n = matrix.length;
     int m = matrix[0].length;
@@ -202,39 +251,32 @@ public class MatrixMultiplication3Kernel implements Kernel {
     System.out.println();
   }
 
-  static double[] multiply(double[] matrixA, double[] matrixB, int a_rows,
-      int a_cols, int b_cols) {
-    final double data[] = new double[a_rows * b_cols];
-
-    for (int k = 0; k < a_cols; k++) {
-      for (int i = 0; i < a_rows; i++) {
-        for (int j = 0; j < b_cols; j++) {
-          data[i * b_cols + j] += matrixA[i * b_cols + k]
-              * matrixB[k * a_rows + j];
+  static double[][] multiply(double[][] matrixA, double[][] matrixB) {
+    int n = matrixA.length;
+    int m = matrixA[0].length;
+    int l = matrixB[0].length;
+    final double matrix[][] = new double[n][l];
+    for (int k = 0; k < m; k++) {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < l; j++) {
+          matrix[i][j] += matrixA[i][k] * matrixB[k][j];
         }
       }
     }
-    return data;
+    return matrix;
   }
 
-  static boolean verify(double[] matrixA, double[] matrixB, int n, int m) {
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
-        if (matrixA[j * m + i] != matrixB[j * m + i]) {
-          System.out.println("Verify ERROR at [" + j + "," + i + "]");
+  static boolean verify(double[][] matrixA, double[][] matrixB) {
+    int n = matrixA.length;
+    int m = matrixA[0].length;
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < m; ++j) {
+        if (matrixA[i][j] != matrixB[i][j]) {
+          System.out.println("Verify ERROR at [" + i + "," + j + "]");
           return false;
         }
       }
     }
     return true;
-  }
-
-  static int divup(int x, int y) {
-    if (x % y != 0) {
-      // aufrunden
-      return ((x + y - 1) / y);
-    } else {
-      return x / y;
-    }
   }
 }
