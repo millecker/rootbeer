@@ -24,6 +24,7 @@ import org.trifort.rootbeer.runtime.Kernel;
 import org.trifort.rootbeer.runtime.Rootbeer;
 import org.trifort.rootbeer.runtime.RootbeerGpu;
 import org.trifort.rootbeer.runtime.StatsRow;
+import org.trifort.rootbeer.runtime.ThreadConfig;
 import org.trifort.rootbeer.runtime.util.Stopwatch;
 
 public class MatrixMultiplication3Kernel implements Kernel {
@@ -61,19 +62,36 @@ public class MatrixMultiplication3Kernel implements Kernel {
     int columnsPerBlock = divup(m_M, gridSize);
     int reductionStart = roundUpToNextPowerOfTwo(divup(blockSize, 2));
 
-    // Loop over all columns of matrixA
+    // DEBUG
+    if (RootbeerGpu.getThreadId() == 0) {
+      System.out.println("columnsPerBlock: " + columnsPerBlock);
+      System.out.println("reductionStart: " + reductionStart);
+    }
+
+    // Loop over all columns of matrix A
     for (int i = 0; i < columnsPerBlock; i++) {
 
       int colId = (gridSize * i) + block_idxx;
       if (colId < m_M) {
 
-        // Loop over all columns of matrixB
+        // Loop over all columns of matrix B
         for (int j = 0; j < m_L; j++) {
 
           if (thread_idxx < m_M) {
-            RootbeerGpu.setSharedDouble(thread_idxx,
-                m_matrixA[colId][thread_idxx] * m_matrixB[j][thread_idxx]);
+            RootbeerGpu.setSharedDouble(thread_idxx * 8,
+                m_matrixA[thread_idxx][colId] * m_matrixB[thread_idxx][j]);
           }
+
+          // Sync all threads within a block
+          RootbeerGpu.syncthreads();
+
+          // DEBUG
+          // if (RootbeerGpu.getThreadId() == 0) {
+          // for (int t = 0; t < m_N; t++) {
+          // System.out.println("colId: " + colId + " j: " + j + " value: "
+          // + RootbeerGpu.getSharedDouble(t * 8));
+          // }
+          // }
 
           // Sync all threads within a block
           RootbeerGpu.syncthreads();
@@ -95,7 +113,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
           }
 
           if (thread_idxx == 0) {
-            m_resultMatrix[j][colId] = RootbeerGpu.getSharedDouble(0);
+            m_resultMatrix[colId][j] = RootbeerGpu.getSharedDouble(0);
           }
 
           // Sync all threads within a block
@@ -127,8 +145,8 @@ public class MatrixMultiplication3Kernel implements Kernel {
   }
 
   public static void main(String[] args) {
-    int n = 2;
-    int m = 2;
+    int n = 4;
+    int m = 4;
     boolean isDebugging = true;
     int gridSize = 14;
     int blockSize = 256;
@@ -169,21 +187,25 @@ public class MatrixMultiplication3Kernel implements Kernel {
       // printArray(matrixC, n, n);
     }
 
-    MatrixMultiplication3Kernel kernel = new MatrixMultiplication3Kernel(
-        matrixA, matrixB);
-
     // Run GPU Kernels
+    MatrixMultiplication3Kernel kernel = new MatrixMultiplication3Kernel(
+        transposedMatrixA, matrixB);
+
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
     Stopwatch watch = new Stopwatch();
     watch.start();
-    // rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
-    // * gridSize), context);
+    rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
+        * gridSize), context);
     watch.stop();
 
     // Get GPU Result
     double[][] matrixC = kernel.m_resultMatrix;
+
+    long startTime = System.currentTimeMillis();
     double[][] matrixD = multiply(matrixA, matrixB);
+    System.out.println("CPU Time: " + (System.currentTimeMillis() - startTime)
+        + "ms");
 
     // Debug
     List<StatsRow> stats = context.getStats();
@@ -195,13 +217,14 @@ public class MatrixMultiplication3Kernel implements Kernel {
       System.out.println("    num blocks: " + row.getNumBlocks());
       System.out.println("    num threads: " + row.getNumThreads());
     }
-    System.out.println("GPUTime: " + watch.elapsedTimeMillis() + "ms");
+    System.out.println("GPU Time: " + watch.elapsedTimeMillis() + "ms");
 
     boolean verifyResult = verify(matrixC, matrixD);
     if (verifyResult) {
-      System.out.println("Verify PASSED!");
+      System.out.println("Verify PASSED!\n");
     } else {
-      System.out.println("Verify FAILED!");
+      System.out.println("Verify FAILED!\n");
+
     }
     if (isDebugging) {
       System.out.println("MatrixC");
@@ -213,8 +236,8 @@ public class MatrixMultiplication3Kernel implements Kernel {
 
   static double[][] createRandomMatrix(int n, int m, Random rand) {
     final double matrix[][] = new double[n][m];
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < m; ++j) {
         // matrix[i][j] = rand.nextDouble();
         matrix[i][j] = rand.nextInt(9) + 1; // between 1 and 10
       }
@@ -272,7 +295,8 @@ public class MatrixMultiplication3Kernel implements Kernel {
     for (int i = 0; i < n; ++i) {
       for (int j = 0; j < m; ++j) {
         if (matrixA[i][j] != matrixB[i][j]) {
-          System.out.println("Verify ERROR at [" + i + "," + j + "]");
+          System.out.println("Verify error at [" + i + "," + j + "]: "
+              + matrixA[i][j] + " != " + matrixB[i][j]);
           return false;
         }
       }
