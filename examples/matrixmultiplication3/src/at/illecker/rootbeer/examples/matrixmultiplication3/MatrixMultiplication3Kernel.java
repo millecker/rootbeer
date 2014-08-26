@@ -27,8 +27,6 @@ import org.trifort.rootbeer.runtime.StatsRow;
 import org.trifort.rootbeer.runtime.ThreadConfig;
 import org.trifort.rootbeer.runtime.util.Stopwatch;
 
-import at.illecker.rootbeer.examples.matrixmultiplication4.MatrixMultiplication4Kernel;
-
 public class MatrixMultiplication3Kernel implements Kernel {
 
   // input
@@ -124,7 +122,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
             int rowId = (blockSize * l) + thread_idxx;
             if (rowId < N) {
               RootbeerGpu.setSharedDouble(8 + thread_idxx * 8,
-                  m_matrixA[rowId][colId] * m_matrixB[rowId][j]);
+                  matrixA[rowId][colId] * matrixB[rowId][j]);
             }
             // Sync all threads within a block
             RootbeerGpu.syncthreads();

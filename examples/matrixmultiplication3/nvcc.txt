@@ -2,11 +2,6 @@
 # MatrixMultiplication3                                                                     #
 #############################################################################################
 
-$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar MatrixMultiplication3.jar MatrixMultiplication3-GPU.jar \
-   -64bit -noexceptions -noarraychecks -shared-mem-size 8212
-
-#############################################################################################
-
 $ nvcc generated.cu --ptxas-options=-v -arch sm_20
 
 ptxas info    : 16 bytes gmem, 16 bytes cmem[14]
@@ -25,19 +20,19 @@ ptxas info    : Used 40 registers, 40984 bytes smem, 380 bytes cmem[0]
 
 #############################################################################################
 
-$ java -Xmx16G -jar MatrixMultiplication3-GPU.jar 4096 1024 4096 4096 false
+$ java -Xmx8G -jar MatrixMultiplication3-GPU.jar 4096 1024 4096 4096 false
 gridSize: 4096
 blockSize: 1024
 n: 4096
 m: 4096
   StatsRow:
-    serial time: 229
-    exec time: 85272
-    deserial time: 134
+    serial time: 245
+    exec time: 82080
+    deserial time: 128
     num blocks: 4096
     num threads: 1024
-GPU Time: 85637ms
-CPU Time: 64279ms
+GPU Time: 82455ms
+CPU Time: 64151ms
 Verify PASSED!
 
 #############################################################################################
