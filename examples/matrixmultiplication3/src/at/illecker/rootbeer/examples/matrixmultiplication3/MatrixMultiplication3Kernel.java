@@ -159,23 +159,27 @@ public class MatrixMultiplication3Kernel implements Kernel {
 
     // parse arguments
     if (args.length > 0) {
-      if (args.length == 3) {
-        n = Integer.parseInt(args[0]);
-        m = Integer.parseInt(args[1]);
-        isDebugging = Boolean.parseBoolean(args[2]);
+      if (args.length == 5) {
+        gridSize = Integer.parseInt(args[0]);
+        blockSize = Integer.parseInt(args[1]);
+        n = Integer.parseInt(args[2]);
+        m = Integer.parseInt(args[3]);
+        isDebugging = Boolean.parseBoolean(args[4]);
       } else {
         System.out.println("Wrong argument size!");
-        System.out.println("    Argument1=n");
-        System.out.println("    Argument2=m");
-        System.out.println("    Argument3=debug(true|false=default)");
+        System.out.println("    Argument1=gridSize");
+        System.out.println("    Argument2=blockSize");
+        System.out.println("    Argument3=n");
+        System.out.println("    Argument4=m");
+        System.out.println("    Argument5=debug(true|false)");
         return;
       }
     }
 
-    System.out.println("n: " + n);
-    System.out.println("m: " + m);
     System.out.println("gridSize: " + gridSize);
     System.out.println("blockSize: " + blockSize);
+    System.out.println("n: " + n);
+    System.out.println("m: " + m);
 
     double[][] matrixA = createRandomMatrix(n, m, new Random(42L));
     double[][] transposedMatrixA = transposeMatrix(matrixA);

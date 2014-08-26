@@ -12,8 +12,8 @@ ant run
 
  # Run GPU Kernel
 # java -Xmx4G -jar MatrixMultiplication3-GPU.jar \
-  [n=4 m=4 debug=false]
+  [gridSize=14 blockSize=256 n=4 m=4 debug=true]
 
-# java -Xmx4G -jar MatrixMultiplication3-GPU.jar 4 4 true
+# java -Xmx4G -jar MatrixMultiplication3-GPU.jar 14 256 4 4 true
 
 ###############################################################################
