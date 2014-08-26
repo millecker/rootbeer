@@ -1,0 +1,42 @@
+#############################################################################################
+# MatrixMultiplication3                                                                     #
+#############################################################################################
+
+$ java -Xmx4G -jar ../../rootbeer-develop-branch.jar MatrixMultiplication3.jar MatrixMultiplication3-GPU.jar \
+   -64bit -noexceptions -noarraychecks -shared-mem-size 8212
+
+#############################################################################################
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_20
+
+ptxas info    : 44 bytes gmem, 48 bytes cmem[14]
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 30 registers, 40984 bytes smem, 116 bytes cmem[0]
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_35
+
+ptxas info    : 44 bytes gmem
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei' for 'sm_35'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_S0_S0_P19HostDeviceInterfacei
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 39 registers, 40984 bytes smem, 404 bytes cmem[0]
+
+#############################################################################################
+
+$ java -Xmx16G -jar MatrixMultiplication3-GPU.jar 4096 1024 4096 4096 false
+gridSize: 4096
+blockSize: 1024
+n: 4096
+m: 4096
+  StatsRow:
+    serial time: 229
+    exec time: 88028
+    deserial time: 132
+    num blocks: 4096
+    num threads: 1024
+GPU Time: 88392ms
+CPU Time: 63705ms
+
+#############################################################################################

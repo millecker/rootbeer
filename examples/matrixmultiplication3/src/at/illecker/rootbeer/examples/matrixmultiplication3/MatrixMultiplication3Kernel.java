@@ -77,12 +77,12 @@ public class MatrixMultiplication3Kernel implements Kernel {
     int reductionStart = roundUpToNextPowerOfTwo(divup(reductionLimit, 2));
 
     // DEBUG
-    if (RootbeerGpu.getThreadId() == 0) {
-      System.out.println("columnsPerBlock: " + columnsPerBlock);
-      System.out.println("rowsPerThread: " + rowsPerThread);
-      System.out.println("reductionLimit: " + reductionLimit);
-      System.out.println("reductionStart: " + reductionStart);
-    }
+    // if (RootbeerGpu.getThreadId() == 0) {
+    // System.out.println("columnsPerBlock: " + columnsPerBlock);
+    // System.out.println("rowsPerThread: " + rowsPerThread);
+    // System.out.println("reductionLimit: " + reductionLimit);
+    // System.out.println("reductionStart: " + reductionStart);
+    // }
 
     // Loop over all columns of matrix A
     for (int i = 0; i < columnsPerBlock; i++) {
@@ -157,7 +157,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
           }
 
           // Sync all threads within a block
-          RootbeerGpu.syncthreads();
+          // RootbeerGpu.syncthreads();
 
         } // for (int j = 0; j < m_L; j++)
 
@@ -238,21 +238,14 @@ public class MatrixMultiplication3Kernel implements Kernel {
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
+    context.init(1024*1024*1024); // 1GB
     Stopwatch watch = new Stopwatch();
     watch.start();
     rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
         * gridSize), context);
     watch.stop();
 
-    // Get GPU Result
-    double[][] matrixC = kernel.m_resultMatrix;
-
-    long startTime = System.currentTimeMillis();
-    double[][] matrixD = multiply(matrixA, matrixB);
-    System.out.println("CPU Time: " + (System.currentTimeMillis() - startTime)
-        + "ms");
-
-    // Debug
+    // DEBUG
     List<StatsRow> stats = context.getStats();
     for (StatsRow row : stats) {
       System.out.println("  StatsRow:");
@@ -263,6 +256,14 @@ public class MatrixMultiplication3Kernel implements Kernel {
       System.out.println("    num threads: " + row.getNumThreads());
     }
     System.out.println("GPU Time: " + watch.elapsedTimeMillis() + "ms");
+
+    // Get GPU Result
+    double[][] matrixC = kernel.m_resultMatrix;
+
+    long startTime = System.currentTimeMillis();
+    double[][] matrixD = multiply(matrixA, matrixB);
+    System.out.println("CPU Time: " + (System.currentTimeMillis() - startTime)
+        + "ms");
 
     boolean verifyResult = verify(matrixC, matrixD);
     if (verifyResult) {

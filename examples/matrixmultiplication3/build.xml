@@ -27,6 +27,7 @@
 			<arg value="-noexceptions" />
 			<arg value="-noarraychecks" />
 			<arg value="-shared-mem-size 8212" />
+			<arg value="-computecapability sm_35" />
 			<!-- <arg value="-maxrregcount 32" /> -->
 		</exec>
 		<echo>java -Xmx4G -jar MatrixMultiplication3-GPU.jar</echo>
