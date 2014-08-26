@@ -27,6 +27,8 @@ import org.trifort.rootbeer.runtime.StatsRow;
 import org.trifort.rootbeer.runtime.ThreadConfig;
 import org.trifort.rootbeer.runtime.util.Stopwatch;
 
+import at.illecker.rootbeer.examples.matrixmultiplication4.MatrixMultiplication4Kernel;
+
 public class MatrixMultiplication3Kernel implements Kernel {
 
   // input
@@ -34,47 +36,65 @@ public class MatrixMultiplication3Kernel implements Kernel {
   private double[][] m_matrixB;
 
   // output
-  public double[][] m_resultMatrix;
+  public double[][] m_matrixC;
 
   // temp
+  private int m_gridSize;
+  private int m_blockSize;
   private int m_N;
   private int m_M;
   private int m_L;
+  private int m_columnsPerBlock;
+  private int m_rowsPerThread;
+  private int m_reductionLimit;
+  private int m_reductionStart;
 
-  public MatrixMultiplication3Kernel(double[][] matrixA, double[][] matrixB) {
+  public MatrixMultiplication3Kernel(double[][] matrixA, double[][] matrixB,
+      int gridSize, int blockSize) {
     m_matrixA = matrixA;
     m_matrixB = matrixB;
+    m_gridSize = gridSize;
+    m_blockSize = blockSize;
     m_N = m_matrixA.length;
     m_M = m_matrixA[0].length;
     m_L = m_matrixB[0].length;
-    m_resultMatrix = new double[m_M][m_L]; // M rows because A is transposed
+    m_matrixC = new double[m_M][m_L]; // M rows because A is transposed
+    m_columnsPerBlock = divup(m_M, gridSize);
+    m_rowsPerThread = divup(m_N, blockSize);
+    if (m_rowsPerThread == 1) {
+      m_reductionLimit = m_N;
+    } else {
+      m_reductionLimit = blockSize;
+    }
+    m_reductionStart = roundUpToNextPowerOfTwo(divup(m_reductionLimit, 2));
   }
 
   /*
    * A block handles a column and each thread within this block takes one row
+   * SharedMemory per block e.g., max blockSize = 1024 and one intermediate
+   * double value => 12 (needed by Rootbeer) + 8 + (1024 * 8) = 8212 bytes bytes
    */
   public void gpuMethod() {
-    int blockSize = RootbeerGpu.getBlockDimx();
-    int gridSize = RootbeerGpu.getGridDimx();
     int block_idxx = RootbeerGpu.getBlockIdxx();
     int thread_idxx = RootbeerGpu.getThreadIdxx();
 
-    // SharedMemory per block
-    // e.g., max blockSize = 1024 and one intermediate double value
-    // => 12 (needed by Rootbeer) + 8 + 1024 * 8 = 8212 bytes
-    // int shmStartPos = 8;
-    // threadResults: blockSize x Doubles
-    // int shmThreadResultsStartPos = 8;
+    // store fields into local variables
+    // each read from a field hits global ram while a local variable
+    // is most likely stored in a register
+    int gridSize = m_gridSize;
+    int blockSize = m_blockSize;
+    int N = m_N;
+    int M = m_M;
+    int L = m_L;
+    int columnsPerBlock = m_columnsPerBlock;
+    int rowsPerThread = m_rowsPerThread;
+    int reductionLimit = m_reductionLimit;
+    int reductionStart = m_reductionStart;
 
-    int columnsPerBlock = divup(m_M, gridSize);
-    int rowsPerThread = divup(m_N, blockSize);
-    int reductionLimit;
-    if (rowsPerThread == 1) {
-      reductionLimit = m_N;
-    } else {
-      reductionLimit = blockSize;
-    }
-    int reductionStart = roundUpToNextPowerOfTwo(divup(reductionLimit, 2));
+    // store pointers to arrays in local variable
+    double[][] matrixA = m_matrixA;
+    double[][] matrixB = m_matrixB;
+    double[][] matrixC = m_matrixC;
 
     // DEBUG
     // if (RootbeerGpu.getThreadId() == 0) {
@@ -88,11 +108,12 @@ public class MatrixMultiplication3Kernel implements Kernel {
     for (int i = 0; i < columnsPerBlock; i++) {
 
       int colId = (gridSize * i) + block_idxx;
-      if (colId < m_M) {
+      if (colId < M) {
 
         // Loop over all columns of matrix B
-        for (int j = 0; j < m_L; j++) {
+        for (int j = 0; j < L; j++) {
 
+          // Init intermediate result in shared memory
           if (thread_idxx == 0) {
             RootbeerGpu.setSharedDouble(0, 0);
           }
@@ -101,11 +122,10 @@ public class MatrixMultiplication3Kernel implements Kernel {
           for (int l = 0; l < rowsPerThread; l++) {
 
             int rowId = (blockSize * l) + thread_idxx;
-            if (rowId < m_N) {
+            if (rowId < N) {
               RootbeerGpu.setSharedDouble(8 + thread_idxx * 8,
                   m_matrixA[rowId][colId] * m_matrixB[rowId][j]);
             }
-
             // Sync all threads within a block
             RootbeerGpu.syncthreads();
 
@@ -153,7 +173,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
           } // for (int l = 0; l < rowsPerThread; l++)
 
           if (thread_idxx == 0) {
-            m_resultMatrix[colId][j] = RootbeerGpu.getSharedDouble(0);
+            matrixC[colId][j] = RootbeerGpu.getSharedDouble(0);
           }
 
           // Sync all threads within a block
@@ -234,11 +254,11 @@ public class MatrixMultiplication3Kernel implements Kernel {
 
     // Run GPU Kernels
     MatrixMultiplication3Kernel kernel = new MatrixMultiplication3Kernel(
-        transposedMatrixA, matrixB);
+        transposedMatrixA, matrixB, gridSize, blockSize);
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
-    context.init(1024*1024*1024); // 1GB
+    context.init(((long) 4 * 1024 * 1024 * 1024)); // 4GB
     Stopwatch watch = new Stopwatch();
     watch.start();
     rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
@@ -258,7 +278,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
     System.out.println("GPU Time: " + watch.elapsedTimeMillis() + "ms");
 
     // Get GPU Result
-    double[][] matrixC = kernel.m_resultMatrix;
+    double[][] matrixC = kernel.m_matrixC;
 
     long startTime = System.currentTimeMillis();
     double[][] matrixD = multiply(matrixA, matrixB);

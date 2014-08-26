@@ -6,7 +6,7 @@
 	</target>
 	<target name="compile">
 		<mkdir dir="build/classes" />
-		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-develop-branch.jar" includeantruntime="false" />
+		<javac srcdir="src" destdir="build/classes" classpath="../../rootbeer-master-branch.jar" includeantruntime="false" />
 	</target>
 	<target name="jar" depends="compile">
 		<jar destfile="MatrixMultiplication3.jar" basedir="build/classes">
@@ -16,19 +16,20 @@
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-develop-branch.jar MatrixMultiplication3.jar MatrixMultiplication3-GPU.jar -64bit -noexceptions -noarraychecks -shared-mem-size 8212</echo>
+		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar MatrixMultiplication3.jar MatrixMultiplication3-GPU.jar -64bit -noexceptions -noarraychecks -shared-mem-size 24596</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
-			<arg value="../../rootbeer-develop-branch.jar" />
+			<arg value="../../rootbeer-master-branch.jar" />
 			<arg value="MatrixMultiplication3.jar" />
 			<arg value="MatrixMultiplication3-GPU.jar" />
 			<arg value="-64bit" />
 			<arg value="-noexceptions" />
 			<arg value="-noarraychecks" />
 			<arg value="-shared-mem-size 8212" />
+			<!-- <arg value="-shared-mem-size 24596" /> -->
 			<arg value="-computecapability sm_35" />
-			<!-- <arg value="-maxrregcount 32" /> -->
+			<arg value="-maxrregcount 32" />
 		</exec>
 		<echo>java -Xmx4G -jar MatrixMultiplication3-GPU.jar</echo>
 		<exec executable="java">
