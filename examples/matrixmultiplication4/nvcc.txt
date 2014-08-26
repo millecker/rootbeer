@@ -1,0 +1,38 @@
+#############################################################################################
+# MatrixMultiplication4                                                                    #
+#############################################################################################
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_20
+
+ptxas info    : 16 bytes gmem, 16 bytes cmem[14]
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_i' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_i
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 36 registers, 40984 bytes smem, 92 bytes cmem[0]
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_35
+
+ptxas info    : 16 bytes gmem
+ptxas info    : Compiling entry function '_Z5entryPcS_PiPxS1_S0_S0_i' for 'sm_35'
+ptxas info    : Function properties for _Z5entryPcS_PiPxS1_S0_S0_i
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 40984 bytes smem, 380 bytes cmem[0]
+
+#############################################################################################
+
+$ java -Xmx16G -jar MatrixMultiplication4-GPU.jar 4096 1024 4096 4096 false
+gridSize: 4096
+blockSize: 1024
+n: 4096
+m: 4096
+  StatsRow:
+    serial time: 229
+    exec time: 85272
+    deserial time: 134
+    num blocks: 4096
+    num threads: 1024
+GPU Time: 85637ms
+CPU Time: 64279ms
+Verify PASSED!
+
+#############################################################################################
