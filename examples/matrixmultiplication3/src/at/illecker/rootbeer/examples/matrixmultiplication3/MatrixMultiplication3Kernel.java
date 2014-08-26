@@ -47,11 +47,11 @@ public class MatrixMultiplication3Kernel implements Kernel {
     m_N = m_matrixA.length;
     m_M = m_matrixA[0].length;
     m_L = m_matrixB[0].length;
-    m_resultMatrix = new double[m_N][m_L];
+    m_resultMatrix = new double[m_M][m_L]; // M rows because A is transposed
   }
 
   public void gpuMethod() {
-    int blockSize = RootbeerGpu.getBlockDimx();
+    // int blockSize = RootbeerGpu.getBlockDimx();
     int gridSize = RootbeerGpu.getGridDimx();
     int block_idxx = RootbeerGpu.getBlockIdxx();
     int thread_idxx = RootbeerGpu.getThreadIdxx();
@@ -60,13 +60,13 @@ public class MatrixMultiplication3Kernel implements Kernel {
     // each thread within this block takes one row
 
     int columnsPerBlock = divup(m_M, gridSize);
-    int reductionStart = roundUpToNextPowerOfTwo(divup(blockSize, 2));
+    int reductionStart = roundUpToNextPowerOfTwo(divup(m_N, 2));
 
     // DEBUG
-    if (RootbeerGpu.getThreadId() == 0) {
-      System.out.println("columnsPerBlock: " + columnsPerBlock);
-      System.out.println("reductionStart: " + reductionStart);
-    }
+    // if (RootbeerGpu.getThreadId() == 0) {
+    // System.out.println("columnsPerBlock: " + columnsPerBlock);
+    // System.out.println("reductionStart: " + reductionStart);
+    // }
 
     // Loop over all columns of matrix A
     for (int i = 0; i < columnsPerBlock; i++) {
@@ -77,7 +77,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
         // Loop over all columns of matrix B
         for (int j = 0; j < m_L; j++) {
 
-          if (thread_idxx < m_M) {
+          if (thread_idxx < m_N) {
             RootbeerGpu.setSharedDouble(thread_idxx * 8,
                 m_matrixA[thread_idxx][colId] * m_matrixB[thread_idxx][j]);
           }
@@ -100,7 +100,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
           // 1-bit right shift = divide by two to the power 1
           for (int s = reductionStart; s > 0; s >>= 1) {
 
-            if ((thread_idxx < s) && (thread_idxx + s) < blockSize) {
+            if ((thread_idxx < s) && (thread_idxx + s) < m_N) {
               // sh_mem[tid] += sh_mem[tid + s];
               RootbeerGpu.setSharedDouble(
                   thread_idxx * 8,
@@ -111,6 +111,12 @@ public class MatrixMultiplication3Kernel implements Kernel {
             // Sync all threads within a block
             RootbeerGpu.syncthreads();
           }
+
+          // DEBUG
+          // if (RootbeerGpu.getThreadId() == 0) {
+          // System.out.println("colId: " + colId + " j: " + j + " sum: "
+          // + RootbeerGpu.getSharedDouble(0));
+          // }
 
           if (thread_idxx == 0) {
             m_resultMatrix[colId][j] = RootbeerGpu.getSharedDouble(0);
@@ -146,7 +152,7 @@ public class MatrixMultiplication3Kernel implements Kernel {
 
   public static void main(String[] args) {
     int n = 4;
-    int m = 4;
+    int m = 2;
     boolean isDebugging = true;
     int gridSize = 14;
     int blockSize = 256;
@@ -249,8 +255,8 @@ public class MatrixMultiplication3Kernel implements Kernel {
     int n = matrix[0].length;
     int m = matrix.length;
     final double transposedMatrix[][] = new double[n][m];
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < m; ++j) {
         transposedMatrix[i][j] = matrix[j][i];
       }
     }
@@ -260,14 +266,14 @@ public class MatrixMultiplication3Kernel implements Kernel {
   static void printMatrix(double[][] matrix) {
     int n = matrix.length;
     int m = matrix[0].length;
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
-        if (i == m - 1) {
-          System.out.println(matrix[j][i] + "]");
-        } else if (i == 0) {
-          System.out.print("[" + matrix[j][i] + ",");
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < m; ++j) {
+        if (j == m - 1) {
+          System.out.println(matrix[i][j] + "]");
+        } else if (j == 0) {
+          System.out.print("[" + matrix[i][j] + ",");
         } else {
-          System.out.print(matrix[j][i] + ",");
+          System.out.print(matrix[i][j] + ",");
         }
       }
     }
