@@ -48,30 +48,31 @@ public class MatrixMultiplication4Kernel implements Kernel {
   private int m_reductionStart;
 
   public MatrixMultiplication4Kernel(double[][] matrixA, double[][] matrixB,
-      int gridSize, int blockSize) {
+      int gridSize, int blockSize, int n, int m, int l) {
     m_matrixA = matrixA;
     m_matrixB = matrixB;
     m_gridSize = gridSize;
     m_blockSize = blockSize;
-    m_N = m_matrixA.length;
-    m_M = m_matrixA[0].length;
-    m_L = m_matrixB[0].length;
-    m_matrixC = new double[m_M][m_L]; // M rows because A is transposed
-    m_columnsPerBlock = divup(m_M, gridSize);
-    m_rowsPerThread = divup(m_N, blockSize);
+    m_N = n;
+    m_M = m;
+    m_L = l;
+    m_matrixC = new double[m][l]; // M rows because A is transposed
+    m_columnsPerBlock = divup(m, gridSize);
+    m_rowsPerThread = divup(n, blockSize);
     if (m_rowsPerThread == 1) {
-      m_reductionLimit = m_N;
+      m_reductionLimit = n;
     } else {
       m_reductionLimit = blockSize;
     }
     m_reductionStart = roundUpToNextPowerOfTwo(divup(m_reductionLimit, 2));
   }
 
-  /*
-   * A block handles a column and each thread within this block takes one row
-   * SharedMemory per block e.g., max blockSize = 1024 and one intermediate
-   * double value => 12 (needed by Rootbeer) + 8 + (1024 * 8) = 8212 bytes bytes
-   */
+  // A block handles a column of matrix A and a column of matrix B and each
+  // thread within this block takes one row
+  //
+  // SharedMemory per block
+  // e.g., max blockSize = 1024 and one intermediate double value
+  // => 12 (needed by Rootbeer) + 8 + (1024 * 8) = 8212 bytes bytes
   public void gpuMethod() {
     int block_idxx = RootbeerGpu.getBlockIdxx();
     int thread_idxx = RootbeerGpu.getThreadIdxx();
@@ -124,23 +125,12 @@ public class MatrixMultiplication4Kernel implements Kernel {
             RootbeerGpu.setSharedDouble(0, 0);
           }
 
-          // Store block column of matrix B in shared memory
-          // if (thread_idxx < reductionLimit) {
-          // RootbeerGpu.setSharedDouble((8 + 1024 * 8) + thread_idxx * 8,
-          // m_matrixB[thread_idxx][j]);
-          // }
-          // Sync all threads within a block
-          // RootbeerGpu.syncthreads();
-
           // Loop over all rows
           for (int l = 0; l < rowsPerThread; l++) {
 
             int rowId = (blockSize * l) + thread_idxx;
             if (rowId < N) {
-              RootbeerGpu.setSharedDouble((8 + 2048 * 8) + thread_idxx * 8,
-              // RootbeerGpu.getSharedDouble(8 + rowId * 8) *
-              // matrixB[rowId][j]);
-              // RootbeerGpu.getSharedDouble((8 + 1024 * 8) + rowId * 8));
+              RootbeerGpu.setSharedDouble(8 + thread_idxx * 8,
                   matrixA[rowId][colId] * matrixB[rowId][j]);
             }
             // Sync all threads within a block
@@ -163,11 +153,10 @@ public class MatrixMultiplication4Kernel implements Kernel {
               if ((thread_idxx < s) && (thread_idxx + s) < reductionLimit) {
                 // sh_mem[tid] += sh_mem[tid + s];
                 RootbeerGpu.setSharedDouble(
-                    (8 + 2048 * 8) + thread_idxx * 8,
-                    RootbeerGpu.getSharedDouble((8 + 2048 * 8) + thread_idxx
-                        * 8)
-                        + RootbeerGpu.getSharedDouble((8 + 2048 * 8)
-                            + (thread_idxx + s) * 8));
+                    8 + thread_idxx * 8,
+                    RootbeerGpu.getSharedDouble(8 + thread_idxx * 8)
+                        + RootbeerGpu
+                            .getSharedDouble(8 + (thread_idxx + s) * 8));
               }
 
               // Sync all threads within a block
@@ -182,7 +171,7 @@ public class MatrixMultiplication4Kernel implements Kernel {
 
             if (thread_idxx == 0) {
               RootbeerGpu.setSharedDouble(0, RootbeerGpu.getSharedDouble(0)
-                  + RootbeerGpu.getSharedDouble(8 + 2048 * 8));
+                  + RootbeerGpu.getSharedDouble(8));
             }
 
             // Sync all threads within a block
@@ -225,38 +214,39 @@ public class MatrixMultiplication4Kernel implements Kernel {
 
   public static void main(String[] args) {
     int n = 4;
-    int m = 2;
+    int m = 4;
+    int l = 4;
     boolean isDebugging = true;
-    int gridSize = 14;
-    int blockSize = 256;
 
     // parse arguments
     if (args.length > 0) {
-      if (args.length == 5) {
-        gridSize = Integer.parseInt(args[0]);
-        blockSize = Integer.parseInt(args[1]);
-        n = Integer.parseInt(args[2]);
-        m = Integer.parseInt(args[3]);
-        isDebugging = Boolean.parseBoolean(args[4]);
+      if (args.length == 4) {
+        n = Integer.parseInt(args[0]);
+        m = Integer.parseInt(args[1]);
+        l = Integer.parseInt(args[2]);
+        isDebugging = Boolean.parseBoolean(args[3]);
       } else {
         System.out.println("Wrong argument size!");
-        System.out.println("    Argument1=gridSize");
-        System.out.println("    Argument2=blockSize");
-        System.out.println("    Argument3=n");
-        System.out.println("    Argument4=m");
-        System.out.println("    Argument5=debug(true|false)");
+        System.out.println("    Argument1=n");
+        System.out.println("    Argument2=m");
+        System.out.println("    Argument3=l");
+        System.out.println("    Argument4=debug(true|false)");
         return;
       }
     }
+
+    int gridSize = n * l;
+    int blockSize = 1024;
 
     System.out.println("gridSize: " + gridSize);
     System.out.println("blockSize: " + blockSize);
     System.out.println("n: " + n);
     System.out.println("m: " + m);
+    System.out.println("l: " + l);
 
     double[][] matrixA = createRandomMatrix(n, m, new Random(42L));
     double[][] transposedMatrixA = transposeMatrix(matrixA);
-    double[][] matrixB = createRandomMatrix(m, n, new Random(1337L));
+    double[][] matrixB = createRandomMatrix(m, l, new Random(1337L));
     // double[][] matrixC = createConstantArray(n, n, 0);
 
     if (isDebugging) {
@@ -272,7 +262,7 @@ public class MatrixMultiplication4Kernel implements Kernel {
 
     // Run GPU Kernels
     MatrixMultiplication4Kernel kernel = new MatrixMultiplication4Kernel(
-        transposedMatrixA, matrixB, gridSize, blockSize);
+        transposedMatrixA, matrixB, gridSize, blockSize, n, m, l);
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();

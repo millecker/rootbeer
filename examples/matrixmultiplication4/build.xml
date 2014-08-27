@@ -16,7 +16,7 @@
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar MatrixMultiplication4.jar MatrixMultiplication4-GPU.jar -64bit -noexceptions -noarraychecks -shared-mem-size 24596</echo>
+		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar MatrixMultiplication4.jar MatrixMultiplication4-GPU.jar -64bit -noexceptions -noarraychecks -shared-mem-size 8212</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
