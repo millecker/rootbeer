@@ -686,8 +686,8 @@ public class OnlineCFKernel implements Kernel {
       Context context = rootbeer.createDefaultContext();
       Stopwatch watch = new Stopwatch();
       watch.start();
-      rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize,
-          (long) blockSize * gridSize), context);
+      rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
+          * gridSize), context);
       watch.stop();
 
       List<StatsRow> stats = context.getStats();
