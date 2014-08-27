@@ -256,10 +256,9 @@ public class MatrixMultiplication3Kernel implements Kernel {
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
-    context.init(((long) 4 * 1024 * 1024 * 1024)); // 4GB
     Stopwatch watch = new Stopwatch();
     watch.start();
-    rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
+    rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, (long) blockSize
         * gridSize), context);
     watch.stop();
 

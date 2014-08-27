@@ -61,7 +61,7 @@ public class SimpleKernel implements Kernel {
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
-    rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
+    rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, (long) blockSize
         * gridSize), context);
 
     for (int i = 0; i < memory.length; i++) {

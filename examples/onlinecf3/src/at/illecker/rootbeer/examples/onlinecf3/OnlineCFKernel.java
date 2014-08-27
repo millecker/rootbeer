@@ -77,7 +77,7 @@ public class OnlineCFKernel implements Kernel {
 
   public void gpuMethod() {
     int blockSize = RootbeerGpu.getBlockDimx();
-    int gridSize = RootbeerGpu.getGridDimx();
+    int gridSize = (int) RootbeerGpu.getGridDimx();
     int block_idxx = RootbeerGpu.getBlockIdxx();
     int thread_idxx = RootbeerGpu.getThreadIdxx();
 
@@ -772,7 +772,7 @@ public class OnlineCFKernel implements Kernel {
       Context context = rootbeer.createDefaultContext();
       Stopwatch watch = new Stopwatch();
       watch.start();
-      rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
+      rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, (long) blockSize
           * gridSize), context);
       watch.stop();
 
