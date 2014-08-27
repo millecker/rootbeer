@@ -27,13 +27,13 @@
 			<arg value="-noexceptions" />
 			<arg value="-shared-mem-size 8204" />
 		</exec>
-		<echo>java -Xmx4G -jar SimpleExample-GPU.jar 2 1</echo>
+		<echo>java -Xmx4G -jar SimpleExample-GPU.jar 1 2</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
 			<arg value="SimpleExample-GPU.jar" />
-			<arg value="2" />
 			<arg value="1" />
+			<arg value="2" />
 		</exec>
 	</target>
 </project>

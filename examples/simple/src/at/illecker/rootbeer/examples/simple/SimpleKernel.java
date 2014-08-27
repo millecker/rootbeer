@@ -16,22 +16,25 @@
  */
 package at.illecker.rootbeer.examples.simple;
 
+import java.util.List;
+
 import org.trifort.rootbeer.runtime.Context;
 import org.trifort.rootbeer.runtime.Kernel;
 import org.trifort.rootbeer.runtime.Rootbeer;
 import org.trifort.rootbeer.runtime.RootbeerGpu;
+import org.trifort.rootbeer.runtime.StatsRow;
 import org.trifort.rootbeer.runtime.ThreadConfig;
 
 public class SimpleKernel implements Kernel {
-  private int[] memory;
+  private int[] m_memory;
 
   public SimpleKernel(int[] memory) {
-    this.memory = memory;
+    m_memory = memory;
   }
 
   public void gpuMethod() {
     int index = RootbeerGpu.getThreadIdxx();
-    memory[index] = index;
+    m_memory[index] = index;
     printHelloRootbeer(index);
   }
 
@@ -40,26 +43,40 @@ public class SimpleKernel implements Kernel {
   }
 
   public static void main(String[] args) {
-    int blockSize = 2; // amount of threads within a block
     int gridSize = 1; // amount of blocks
+    int blockSize = 2; // amount of threads within a block
     // parse arguments
     if ((args.length > 0) && (args.length == 2)) {
-      blockSize = Integer.parseInt(args[0]);
-      gridSize = Integer.parseInt(args[1]);
+      gridSize = Integer.parseInt(args[0]);
+      blockSize = Integer.parseInt(args[1]);
     } else {
       System.out.println("Wrong argument size!");
-      System.out.println("    Argument1=blockSize");
-      System.out.println("    Argument2=gridSize");
+      System.out.println("    Argument1=gridSize");
+      System.out.println("    Argument2=blockSize");
       return;
     }
-    Rootbeer rootbeer = new Rootbeer();
-    Context context = rootbeer.createDefaultContext();
+
     int[] memory = new int[blockSize * gridSize];
     SimpleKernel kernel = new SimpleKernel(memory);
+
+    Rootbeer rootbeer = new Rootbeer();
+    Context context = rootbeer.createDefaultContext();
     rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
         * gridSize), context);
+
     for (int i = 0; i < memory.length; i++) {
       System.out.println("Kernel: " + i + " has index: " + memory[i]);
+    }
+
+    // DEBUG
+    List<StatsRow> stats = context.getStats();
+    for (StatsRow row : stats) {
+      System.out.println("  StatsRow:");
+      System.out.println("    serial time: " + row.getSerializationTime());
+      System.out.println("    exec time: " + row.getExecutionTime());
+      System.out.println("    deserial time: " + row.getDeserializationTime());
+      System.out.println("    num blocks: " + row.getNumBlocks());
+      System.out.println("    num threads: " + row.getNumThreads());
     }
   }
 }

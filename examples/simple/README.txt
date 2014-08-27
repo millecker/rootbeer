@@ -11,9 +11,9 @@ ant clean
 ant run
 
  # Run GPU Kernel
-# java -Xmx4G -jar SimpleExample-GPU.jar \
-  [blockSize=2 gridSize=1]
+# java -Xmx4g -jar SimpleExample-GPU.jar \
+  [gridSize=1 blockSize=2]
 
-# java -Xmx4G -jar SimpleExample-GPU.jar 2 1
+# java -Xmx4g -jar SimpleExample-GPU.jar 1 2
 
 ###############################################################################
