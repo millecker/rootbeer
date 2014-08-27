@@ -29,14 +29,10 @@ import org.trifort.rootbeer.runtime.util.Stopwatch;
 
 public class MatrixMultiplication4Kernel implements Kernel {
 
-  // input
-  private double[][] m_matrixA;
+  private double[][] m_matrixA; // matrix A is transposed
   private double[][] m_matrixB;
+  private double[][] m_matrixC;
 
-  // output
-  public double[][] m_matrixC;
-
-  // temp
   private int m_gridSize;
   private int m_blockSize;
   private int m_N;
@@ -47,20 +43,21 @@ public class MatrixMultiplication4Kernel implements Kernel {
   private int m_reductionLimit;
   private int m_reductionStart;
 
-  public MatrixMultiplication4Kernel(double[][] matrixA, double[][] matrixB,
-      int gridSize, int blockSize, int n, int m, int l) {
-    m_matrixA = matrixA;
-    m_matrixB = matrixB;
+  public MatrixMultiplication4Kernel(double[][] transposedmatrixA,
+      double[][] matrixB, double[][] matrixC, int gridSize, int blockSize,
+      int n, int m, int l) {
+    m_matrixA = transposedmatrixA; // m x n
+    m_matrixB = matrixB; // m x l
+    m_matrixC = matrixC; // n x l
     m_gridSize = gridSize;
     m_blockSize = blockSize;
     m_N = n;
     m_M = m;
     m_L = l;
-    m_matrixC = new double[m][l]; // M rows because A is transposed
-    m_columnsPerBlock = divup(m, gridSize);
-    m_rowsPerThread = divup(n, blockSize);
+    m_columnsPerBlock = divup(n, gridSize);
+    m_rowsPerThread = divup(m, blockSize);
     if (m_rowsPerThread == 1) {
-      m_reductionLimit = n;
+      m_reductionLimit = m;
     } else {
       m_reductionLimit = blockSize;
     }
@@ -73,6 +70,7 @@ public class MatrixMultiplication4Kernel implements Kernel {
   // SharedMemory per block
   // e.g., max blockSize = 1024 and one intermediate double value
   // => 12 (needed by Rootbeer) + 8 + (1024 * 8) = 8212 bytes bytes
+  //
   public void gpuMethod() {
     int block_idxx = RootbeerGpu.getBlockIdxx();
     int thread_idxx = RootbeerGpu.getThreadIdxx();
@@ -107,15 +105,7 @@ public class MatrixMultiplication4Kernel implements Kernel {
     for (int i = 0; i < columnsPerBlock; i++) {
 
       int colId = (gridSize * i) + block_idxx;
-      if (colId < M) {
-
-        // Store block column of matrix A in shared memory
-        // if (thread_idxx < reductionLimit) {
-        // RootbeerGpu.setSharedDouble(8 + thread_idxx * 8,
-        // matrixA[thread_idxx][colId]);
-        // }
-        // Sync all threads within a block
-        // RootbeerGpu.syncthreads();
+      if (colId < N) {
 
         // Loop over all columns of matrix B
         for (int j = 0; j < L; j++) {
@@ -129,7 +119,7 @@ public class MatrixMultiplication4Kernel implements Kernel {
           for (int l = 0; l < rowsPerThread; l++) {
 
             int rowId = (blockSize * l) + thread_idxx;
-            if (rowId < N) {
+            if (rowId < M) {
               RootbeerGpu.setSharedDouble(8 + thread_idxx * 8,
                   matrixA[rowId][colId] * matrixB[rowId][j]);
             }
@@ -238,7 +228,8 @@ public class MatrixMultiplication4Kernel implements Kernel {
     int gridSize = n * l;
     int blockSize = 1024;
 
-    System.out.println("gridSize: " + gridSize);
+    System.out.println("gridSize: " + gridSize + " MaxInt: "
+        + Integer.MAX_VALUE);
     System.out.println("blockSize: " + blockSize);
     System.out.println("n: " + n);
     System.out.println("m: " + m);
@@ -247,7 +238,7 @@ public class MatrixMultiplication4Kernel implements Kernel {
     double[][] matrixA = createRandomMatrix(n, m, new Random(42L));
     double[][] transposedMatrixA = transposeMatrix(matrixA);
     double[][] matrixB = createRandomMatrix(m, l, new Random(1337L));
-    // double[][] matrixC = createConstantArray(n, n, 0);
+    double[][] matrixC = new double[n][l];
 
     if (isDebugging) {
       System.out.println("MatrixA");
@@ -262,11 +253,10 @@ public class MatrixMultiplication4Kernel implements Kernel {
 
     // Run GPU Kernels
     MatrixMultiplication4Kernel kernel = new MatrixMultiplication4Kernel(
-        transposedMatrixA, matrixB, gridSize, blockSize, n, m, l);
+        transposedMatrixA, matrixB, matrixC, gridSize, blockSize, n, m, l);
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
-    context.init(((long) 4 * 1024 * 1024 * 1024)); // 4GB
     Stopwatch watch = new Stopwatch();
     watch.start();
     rootbeer.run(kernel, new ThreadConfig(blockSize, gridSize, blockSize
@@ -284,9 +274,6 @@ public class MatrixMultiplication4Kernel implements Kernel {
       System.out.println("    num threads: " + row.getNumThreads());
     }
     System.out.println("GPU Time: " + watch.elapsedTimeMillis() + "ms");
-
-    // Get GPU Result
-    double[][] matrixC = kernel.m_matrixC;
 
     long startTime = System.currentTimeMillis();
     double[][] matrixD = multiply(matrixA, matrixB);
