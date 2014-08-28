@@ -31,7 +31,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
 
   // TILE_WITH denotes the size of one submatrix
   // 32 * 32 = 1024 threads matches the blocksize
-  public static final int TILE_WIDTH = 2;
+  public static final int TILE_WIDTH = 32;
 
   private double[] m_matrixA; // matrix A is transposed
   private double[] m_matrixB;
@@ -121,7 +121,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
       double bValue = matrixB[bValueIndex];
 
       // DEBUG
-      // if (block_idxx == 1) {
+      // if (block_idxx == 0) {
       // print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
       // + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
       // + threadCol + " dest(x,y): " + destRow + "," + destCol + " m:" + m
@@ -151,14 +151,17 @@ public class MatrixMultiplication5Kernel implements Kernel {
         // multiply aValue and bValue and accumulate
         sum += aValue * bValue;
 
-        // if (block_idxx == 1) {
+        // DEBUG
+        // if (block_idxx == 0) {
         // print("blockId(x,y)= " + blockRow + "," + blockCol + " threadId: "
         // + RootbeerGpu.getThreadId() + " aValue: " + aValue + " bValue: "
         // + bValue + " sum: " + sum);
         // }
       }
 
-      // sync threads within a block
+      // sync threads within a block to make sure that the preceding
+      // computation is done before loading two new
+      // sub-matrices of A and B in the next iteration
       RootbeerGpu.syncthreads();
     }
 
@@ -166,7 +169,8 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // update the target cValue with the sum
     matrixC[cValueIndex] = sum;
 
-    // if (block_idxx == 1) {
+    // DEBUG
+    // if (block_idxx == 0) {
     // print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
     // + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
     // + threadCol + " dest(x,y): " + destRow + "," + destCol
@@ -180,37 +184,41 @@ public class MatrixMultiplication5Kernel implements Kernel {
   }
 
   public static void main(String[] args) {
-    int n = 4;
-    int m = 4;
-    int l = 4;
-    boolean isDebugging = true;
+    int tileWidth = TILE_WIDTH;
+    int n = 32;
+    int m = 32;
+    int l = 32;
+    boolean isDebugging = false;
 
     // parse arguments
     if (args.length > 0) {
-      if (args.length == 4) {
-        n = Integer.parseInt(args[0]);
-        m = Integer.parseInt(args[1]);
-        l = Integer.parseInt(args[2]);
-        isDebugging = Boolean.parseBoolean(args[3]);
+      if (args.length == 5) {
+        tileWidth = Integer.parseInt(args[0]);
+        n = Integer.parseInt(args[1]);
+        m = Integer.parseInt(args[2]);
+        l = Integer.parseInt(args[3]);
+        isDebugging = Boolean.parseBoolean(args[4]);
       } else {
         System.out.println("Wrong argument size!");
-        System.out.println("    Argument1=n");
-        System.out.println("    Argument2=m");
-        System.out.println("    Argument3=l");
-        System.out.println("    Argument4=debug(true|false)");
+        System.out.println("    Argument1=tileWidth(" + tileWidth + ")");
+        System.out.println("    Argument2=n");
+        System.out.println("    Argument3=m");
+        System.out.println("    Argument4=l");
+        System.out.println("    Argument5=debug(true|false)");
         return;
       }
     }
 
-    int subMatrixSize = TILE_WIDTH * TILE_WIDTH;
+    int subMatrixSize = tileWidth * tileWidth;
     int numberOfSubMatrices = divup(n * l, subMatrixSize);
     int gridSize = numberOfSubMatrices;
     int blockSize = subMatrixSize;
 
     // int subMatrixSize = tileWidth * tileWidth;
     // rows of A and cols of B per block
-    int subMatricesPerThread = divup(m, TILE_WIDTH);
+    int subMatricesPerThread = divup(m, tileWidth);
 
+    System.out.println("tileWidth: " + tileWidth);
     System.out.println("gridSize: " + gridSize);
     System.out.println("blockSize: " + blockSize);
     System.out.println("n: " + n);
@@ -234,7 +242,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // Run GPU Kernels
     MatrixMultiplication5Kernel kernel = new MatrixMultiplication5Kernel(
         transposedMatrixAgpu, matrixB, matrixCgpu, n, m, l, gridSize,
-        blockSize, TILE_WIDTH, subMatricesPerThread);
+        blockSize, tileWidth, subMatricesPerThread);
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
