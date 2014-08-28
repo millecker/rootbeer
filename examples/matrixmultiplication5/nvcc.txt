@@ -25,7 +25,20 @@ ptxas info    : Used 33 registers, 40984 bytes smem, 384 bytes cmem[0
 
 #############################################################################################
 
-$ java -Xms8g -Xmx8g -jar MatrixMultiplication5-GPU.jar 4096 4096 4096 false
+$ java -Xms8g -Xmx8g -jar MatrixMultiplication5-GPU.jar 32 4096 4096 4096 false
+tileWidth: 32
+gridSize: 16384
+blockSize: 1024
+n: 4096
+m: 4096
+l: 4096
+  StatsRow:
+    serial time: 120
+    exec time: 5959
+    deserial time: 53
+    num blocks: 16384
+    num threads: 1024
+GPU Time: 6138ms
 
 
 #############################################################################################
