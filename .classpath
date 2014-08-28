@@ -5,6 +5,7 @@
 	<classpathentry kind="src" path="examples/matrixmultiplication2/src"/>
 	<classpathentry kind="src" path="examples/matrixmultiplication3/src"/>
 	<classpathentry kind="src" path="examples/matrixmultiplication4/src"/>
+	<classpathentry kind="src" path="examples/matrixmultiplication5/src"/>
 	<classpathentry kind="src" path="examples/onlinecf/src"/>
 	<classpathentry kind="src" path="examples/onlinecf2/src"/>
 	<classpathentry kind="src" path="examples/onlinecf3/src"/>
