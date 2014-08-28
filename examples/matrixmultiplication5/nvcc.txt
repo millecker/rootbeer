@@ -1,0 +1,31 @@
+#############################################################################################
+# MatrixMultiplication5                                                                     #
+#############################################################################################
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_20
+ptxas info    : 16 bytes gmem, 16 bytes cmem[14]
+ptxas info    : Compiling entry function '_Z5entryPcS_PiS0_PxS0_S0_ii' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiS0_PxS0_S0_ii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 33 registers, 40984 bytes smem, 96 bytes cmem[0]
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_20 -maxrregcount=32
+ptxas info    : 16 bytes gmem, 16 bytes cmem[14]
+ptxas info    : Compiling entry function '_Z5entryPcS_PiS0_PxS0_S0_ii' for 'sm_20'
+ptxas info    : Function properties for _Z5entryPcS_PiS0_PxS0_S0_ii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 30 registers, 40984 bytes smem, 96 bytes cmem[0]
+
+$ nvcc generated.cu --ptxas-options=-v -arch sm_35
+ptxas info    : 16 bytes gmem
+ptxas info    : Compiling entry function '_Z5entryPcS_PiS0_PxS0_S0_ii' for 'sm_35'
+ptxas info    : Function properties for _Z5entryPcS_PiS0_PxS0_S0_ii
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 33 registers, 40984 bytes smem, 384 bytes cmem[0
+
+#############################################################################################
+
+$ java -Xms8g -Xmx8g -jar MatrixMultiplication5-GPU.jar 4096 4096 4096 false
+
+
+#############################################################################################

@@ -75,9 +75,9 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // store fields into local variables
     // each read from a field hits global ram while a local variable
     // is most likely stored in a register
-    int gridSize = m_gridSize;
-    int blockSize = m_blockSize;
-    int N = m_N;
+    // int gridSize = m_gridSize;
+    // int blockSize = m_blockSize;
+    // int N = m_N;
     int M = m_M;
     int L = m_L;
     int tileWidth = m_tileWidth;
@@ -109,26 +109,27 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // Multiply each pair of sub-matrices together
     // and accumulate the results
     for (int m = 0; m < subMatricesPerThread; m++) {
-      int aRowIndex = (m * tileWidth) + destRow;
-      int aColIndex = destCol;
+      int aRowIndex = (m * tileWidth) + threadRow;
+      int aColIndex = (blockRow * tileWidth) + threadCol;
       int aValueIndex = (aRowIndex * M) + aColIndex;
 
-      int bRowIndex = (m * tileWidth) + destRow;
+      int bRowIndex = (m * tileWidth) + threadRow;
       int bColIndex = destCol;
       int bValueIndex = (bRowIndex * L) + bColIndex;
 
       double aValue = matrixA[aValueIndex];
       double bValue = matrixB[bValueIndex];
 
-      if (block_idxx == 0) {
-        print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
-            + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
-            + threadCol + " dest(x,y): " + destRow + "," + destCol + " m:" + m
-            + " A(x,y)=" + aRowIndex + "," + aColIndex + " aValueIndex: "
-            + aValueIndex + " B(x,y)=" + bRowIndex + "," + bColIndex
-            + " bValueIndex: " + bValueIndex + " aValue: " + aValue
-            + " bValue: " + bValue);
-      }
+      // DEBUG
+      // if (block_idxx == 1) {
+      // print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
+      // + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
+      // + threadCol + " dest(x,y): " + destRow + "," + destCol + " m:" + m
+      // + " A(x,y)=" + aRowIndex + "," + aColIndex + " aValueIndex: "
+      // + aValueIndex + " B(x,y)=" + bRowIndex + "," + bColIndex
+      // + " bValueIndex: " + bValueIndex + " aValue: " + aValue
+      // + " bValue: " + bValue);
+      // }
 
       // store the aValue into shared memory at location
       RootbeerGpu.setSharedDouble(thread_idxx * 8, aValue);
@@ -140,21 +141,21 @@ public class MatrixMultiplication5Kernel implements Kernel {
       RootbeerGpu.syncthreads();
 
       // loop over all of aValues and bValues
-      for (int k = 0; k < tileWidth; ++k) {
+      for (int k = 0; k < tileWidth; k++) {
         // read the aValue from shared memory
-        aValue = RootbeerGpu.getSharedDouble((k * tileWidth + destRow) * 8);
+        aValue = RootbeerGpu.getSharedDouble((k * tileWidth + threadRow) * 8);
         // read the bValue from shared memory
         bValue = RootbeerGpu
-            .getSharedDouble(1024 + (k * tileWidth + destCol) * 8);
+            .getSharedDouble(1024 + (k * tileWidth + threadCol) * 8);
 
         // multiply aValue and bValue and accumulate
         sum += aValue * bValue;
 
-        if (block_idxx == 0) {
-          print("blockId(x,y)= " + blockRow + "," + blockCol + " threadId: "
-              + RootbeerGpu.getThreadId() + " aValue: " + aValue + " bValue: "
-              + bValue + " sum: " + sum);
-        }
+        // if (block_idxx == 1) {
+        // print("blockId(x,y)= " + blockRow + "," + blockCol + " threadId: "
+        // + RootbeerGpu.getThreadId() + " aValue: " + aValue + " bValue: "
+        // + bValue + " sum: " + sum);
+        // }
       }
 
       // sync threads within a block
@@ -165,12 +166,12 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // update the target cValue with the sum
     matrixC[cValueIndex] = sum;
 
-    if (block_idxx == 0) {
-      print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
-          + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
-          + threadCol + " dest(x,y): " + destRow + "," + destCol
-          + " setMatrixC at Index: " + cValueIndex + " sum: " + sum);
-    }
+    // if (block_idxx == 1) {
+    // print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
+    // + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
+    // + threadCol + " dest(x,y): " + destRow + "," + destCol
+    // + " setMatrixC at Index: " + cValueIndex + " sum: " + sum);
+    // }
 
   }
 
@@ -179,9 +180,9 @@ public class MatrixMultiplication5Kernel implements Kernel {
   }
 
   public static void main(String[] args) {
-    int n = 2;
-    int m = 2;
-    int l = 2;
+    int n = 4;
+    int m = 4;
+    int l = 4;
     boolean isDebugging = true;
 
     // parse arguments
