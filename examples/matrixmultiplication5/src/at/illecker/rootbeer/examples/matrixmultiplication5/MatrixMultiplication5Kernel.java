@@ -29,23 +29,25 @@ import org.trifort.rootbeer.runtime.util.Stopwatch;
 
 public class MatrixMultiplication5Kernel implements Kernel {
 
+  // TILE_WITH denotes the size of one submatrix
+  // 32 * 32 = 1024 threads matches the blocksize
+  public static final int TILE_WIDTH = 2;
+
   private double[] m_matrixA; // matrix A is transposed
   private double[] m_matrixB;
   private double[] m_matrixC;
   private int m_N;
   private int m_M;
   private int m_L;
-
   private int m_gridSize;
   private int m_blockSize;
 
-  private int m_rowsPerThread;
-  private int m_reductionLimit;
-  private int m_reductionStart;
+  private int m_tileWidth;
+  private int m_subMatricesPerThread;
 
   public MatrixMultiplication5Kernel(double[] transposedmatrixA,
       double[] matrixB, double[] matrixC, int n, int m, int l, int gridSize,
-      int blockSize) {
+      int blockSize, int tileWidth, int subMatricesPerThread) {
     m_matrixA = transposedmatrixA; // m x n
     m_matrixB = matrixB; // m x l
     m_matrixC = matrixC; // n x l
@@ -54,79 +56,132 @@ public class MatrixMultiplication5Kernel implements Kernel {
     m_L = l;
     m_gridSize = gridSize;
     m_blockSize = blockSize;
-
-    m_rowsPerThread = divup(m, blockSize);
-    if (m_rowsPerThread == 1) {
-      m_reductionLimit = m;
-    } else {
-      m_reductionLimit = blockSize;
-    }
-    m_reductionStart = roundUpToNextPowerOfTwo(divup(m_reductionLimit, 2));
+    m_tileWidth = tileWidth; // 32 by default
+    m_subMatricesPerThread = subMatricesPerThread;
   }
 
-  // A block handles a column of matrix A and a column of matrix B and each
-  // thread within this block takes one row
-  //
   // SharedMemory per block
-  // e.g., max blockSize = 1024 and one intermediate double value
-  // => 12 (needed by Rootbeer) + 8 + (1024 * 8) = 8212 bytes bytes
+  // blockSize = 1024
+  // => 12 (needed by Rootbeer) + (2 * 1024 * 8 (double)) = 16396 bytes
+  //
+  // based on
+  // http://www.shodor.org/media/content//petascale/materials/UPModules/matrixMultiplication/moduleDocument.pdf
   //
   public void gpuMethod() {
+    // get local blockIdx and threadIdx
     int block_idxx = RootbeerGpu.getBlockIdxx();
     int thread_idxx = RootbeerGpu.getThreadIdxx();
 
     // store fields into local variables
     // each read from a field hits global ram while a local variable
     // is most likely stored in a register
+    int gridSize = m_gridSize;
     int blockSize = m_blockSize;
     int N = m_N;
     int M = m_M;
     int L = m_L;
-    int rowsPerThread = m_rowsPerThread;
-    int reductionLimit = m_reductionLimit;
-    int reductionStart = m_reductionStart;
+    int tileWidth = m_tileWidth;
+    int subMatricesPerThread = m_subMatricesPerThread;
 
     // store pointers to arrays in local variable
     double[] matrixA = m_matrixA;
     double[] matrixB = m_matrixB;
     double[] matrixC = m_matrixC;
 
-    int colAId = block_idxx / L;
-    int colBId = block_idxx % L;
+    // Convert block_idxx to a two dimensional index
+    int blockRow = block_idxx / (L / tileWidth);
+    int blockCol = block_idxx % (L / tileWidth);
 
-    // DEBUG
-    // if (RootbeerGpu.getThreadId() == 0) {
-    // System.out.println("columnsPerBlock: " + columnsPerBlock);
-    // System.out.println("rowsPerThread: " + rowsPerThread);
-    // System.out.println("reductionLimit: " + reductionLimit);
-    // System.out.println("reductionStart: " + reductionStart);
-    // }
+    // Convert thread_idxx to a two dimensional index within submatrix
+    int threadRow = thread_idxx / tileWidth;
+    int threadCol = thread_idxx % tileWidth;
 
-  }
+    // Calculate the index of the destination row and col within submatrix
+    int destRow = (blockRow * tileWidth) + threadRow;
+    int destCol = (blockCol * tileWidth) + threadCol;
 
-  private int divup(int x, int y) {
-    if (x % y != 0) {
-      return ((x + y - 1) / y); // round up
-    } else {
-      return x / y;
+    // print(RootbeerGpu.getThreadId(), colA, colB, 0, 0, 0);
+
+    double sum = 0;
+
+    // Loop over all the sub-matrices of A and B that are
+    // required to compute Csub
+    // Multiply each pair of sub-matrices together
+    // and accumulate the results
+    for (int m = 0; m < subMatricesPerThread; m++) {
+      int aRowIndex = (m * tileWidth) + destRow;
+      int aColIndex = destCol;
+      int aValueIndex = (aRowIndex * M) + aColIndex;
+
+      int bRowIndex = (m * tileWidth) + destRow;
+      int bColIndex = destCol;
+      int bValueIndex = (bRowIndex * L) + bColIndex;
+
+      double aValue = matrixA[aValueIndex];
+      double bValue = matrixB[bValueIndex];
+
+      if (block_idxx == 0) {
+        print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
+            + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
+            + threadCol + " dest(x,y): " + destRow + "," + destCol + " m:" + m
+            + " A(x,y)=" + aRowIndex + "," + aColIndex + " aValueIndex: "
+            + aValueIndex + " B(x,y)=" + bRowIndex + "," + bColIndex
+            + " bValueIndex: " + bValueIndex + " aValue: " + aValue
+            + " bValue: " + bValue);
+      }
+
+      // store the aValue into shared memory at location
+      RootbeerGpu.setSharedDouble(thread_idxx * 8, aValue);
+      // store the bValue into shared memory at location
+      // 1024 is the offset for the row of matrix A
+      RootbeerGpu.setSharedDouble(1024 + (thread_idxx * 8), bValue);
+
+      // sync threads within a block to make sure the sub-matrices are loaded
+      RootbeerGpu.syncthreads();
+
+      // loop over all of aValues and bValues
+      for (int k = 0; k < tileWidth; ++k) {
+        // read the aValue from shared memory
+        aValue = RootbeerGpu.getSharedDouble((k * tileWidth + destRow) * 8);
+        // read the bValue from shared memory
+        bValue = RootbeerGpu
+            .getSharedDouble(1024 + (k * tileWidth + destCol) * 8);
+
+        // multiply aValue and bValue and accumulate
+        sum += aValue * bValue;
+
+        if (block_idxx == 0) {
+          print("blockId(x,y)= " + blockRow + "," + blockCol + " threadId: "
+              + RootbeerGpu.getThreadId() + " aValue: " + aValue + " bValue: "
+              + bValue + " sum: " + sum);
+        }
+      }
+
+      // sync threads within a block
+      RootbeerGpu.syncthreads();
     }
+
+    int cValueIndex = destRow * L + destCol;
+    // update the target cValue with the sum
+    matrixC[cValueIndex] = sum;
+
+    if (block_idxx == 0) {
+      print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
+          + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
+          + threadCol + " dest(x,y): " + destRow + "," + destCol
+          + " setMatrixC at Index: " + cValueIndex + " sum: " + sum);
+    }
+
   }
 
-  private int roundUpToNextPowerOfTwo(int x) {
-    x--;
-    x |= x >> 1; // handle 2 bit numbers
-    x |= x >> 2; // handle 4 bit numbers
-    x |= x >> 4; // handle 8 bit numbers
-    x |= x >> 8; // handle 16 bit numbers
-    x |= x >> 16; // handle 32 bit numbers
-    x++;
-    return x;
+  public synchronized void print(String s) {
+    System.out.println(s);
   }
 
   public static void main(String[] args) {
-    int n = 4;
-    int m = 4;
-    int l = 4;
+    int n = 2;
+    int m = 2;
+    int l = 2;
     boolean isDebugging = true;
 
     // parse arguments
@@ -146,9 +201,14 @@ public class MatrixMultiplication5Kernel implements Kernel {
       }
     }
 
-    // TODO
-    int gridSize = 1; // n * l;
-    int blockSize = 1024;
+    int subMatrixSize = TILE_WIDTH * TILE_WIDTH;
+    int numberOfSubMatrices = divup(n * l, subMatrixSize);
+    int gridSize = numberOfSubMatrices;
+    int blockSize = subMatrixSize;
+
+    // int subMatrixSize = tileWidth * tileWidth;
+    // rows of A and cols of B per block
+    int subMatricesPerThread = divup(m, TILE_WIDTH);
 
     System.out.println("gridSize: " + gridSize);
     System.out.println("blockSize: " + blockSize);
@@ -172,7 +232,8 @@ public class MatrixMultiplication5Kernel implements Kernel {
 
     // Run GPU Kernels
     MatrixMultiplication5Kernel kernel = new MatrixMultiplication5Kernel(
-        transposedMatrixAgpu, matrixB, matrixCgpu, gridSize, blockSize, n, m, l);
+        transposedMatrixAgpu, matrixB, matrixCgpu, n, m, l, gridSize,
+        blockSize, TILE_WIDTH, subMatricesPerThread);
 
     Rootbeer rootbeer = new Rootbeer();
     Context context = rootbeer.createDefaultContext();
@@ -214,6 +275,14 @@ public class MatrixMultiplication5Kernel implements Kernel {
     }
   }
 
+  static int divup(int x, int y) {
+    if (x % y != 0) {
+      return ((x + y - 1) / y); // round up
+    } else {
+      return x / y;
+    }
+  }
+
   static double[] createRandomMatrix(int n, int m, Random rand) {
     final double matrix[] = new double[n * m];
     for (int i = 0; i < n; ++i) {
@@ -229,7 +298,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
     final double transposedMatrix[] = new double[m * n];
     for (int i = 0; i < m; ++i) {
       for (int j = 0; j < n; ++j) {
-        transposedMatrix[i * n + j] = matrix[j * m + i]; // // M[i][j] = M[j][i]
+        transposedMatrix[i * n + j] = matrix[j * m + i]; // M[i][j] = M[j][i]
       }
     }
     return transposedMatrix;
@@ -259,7 +328,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
         for (int k = 0; k < m; k++) { // for each col of A and row of B
           sum += (matrixA[i * m + k] * matrixB[k * l + j]); // A[i][k] * B[k][j]
         }
-        matrix[i * l + j] = sum; // C[i][j]
+        matrix[i * l + j] = sum; // C[i][j] += A[i][k] * B[k][j]
       }
     }
     return matrix;
