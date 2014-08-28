@@ -38,7 +38,6 @@ public class MatrixMultiplication4Kernel implements Kernel {
   private int m_N;
   private int m_M;
   private int m_L;
-  private int m_columnsPerBlock;
   private int m_rowsPerThread;
   private int m_reductionLimit;
   private int m_reductionStart;
@@ -54,7 +53,6 @@ public class MatrixMultiplication4Kernel implements Kernel {
     m_N = n;
     m_M = m;
     m_L = l;
-    m_columnsPerBlock = divup(n, gridSize);
     m_rowsPerThread = divup(m, blockSize);
     if (m_rowsPerThread == 1) {
       m_reductionLimit = m;
@@ -78,12 +76,10 @@ public class MatrixMultiplication4Kernel implements Kernel {
     // store fields into local variables
     // each read from a field hits global ram while a local variable
     // is most likely stored in a register
-    int gridSize = m_gridSize;
     int blockSize = m_blockSize;
     int N = m_N;
     int M = m_M;
     int L = m_L;
-    int columnsPerBlock = m_columnsPerBlock;
     int rowsPerThread = m_rowsPerThread;
     int reductionLimit = m_reductionLimit;
     int reductionStart = m_reductionStart;
@@ -101,86 +97,61 @@ public class MatrixMultiplication4Kernel implements Kernel {
     // System.out.println("reductionStart: " + reductionStart);
     // }
 
-    // Loop over all columns of matrix A
-    for (int i = 0; i < columnsPerBlock; i++) {
+    int colAId = block_idxx / L;
+    int colBId = block_idxx % L;
 
-      int colId = (gridSize * i) + block_idxx;
-      if (colId < N) {
+    if (colAId < N) {
 
-        // Loop over all columns of matrix B
-        for (int j = 0; j < L; j++) {
+      // Init intermediate result in shared memory
+      if (thread_idxx == 0) {
+        RootbeerGpu.setSharedDouble(0, 0);
+      }
 
-          // Init intermediate result in shared memory
-          if (thread_idxx == 0) {
-            RootbeerGpu.setSharedDouble(0, 0);
-          }
+      // Loop over all rows
+      for (int l = 0; l < rowsPerThread; l++) {
 
-          // Loop over all rows
-          for (int l = 0; l < rowsPerThread; l++) {
+        int rowId = (blockSize * l) + thread_idxx;
+        if (rowId < M) {
+          RootbeerGpu.setSharedDouble(8 + thread_idxx * 8,
+              matrixA[rowId][colAId] * matrixB[rowId][colBId]);
+        }
+        // Sync all threads within a block
+        RootbeerGpu.syncthreads();
 
-            int rowId = (blockSize * l) + thread_idxx;
-            if (rowId < M) {
-              RootbeerGpu.setSharedDouble(8 + thread_idxx * 8,
-                  matrixA[rowId][colId] * matrixB[rowId][j]);
-            }
-            // Sync all threads within a block
-            RootbeerGpu.syncthreads();
+        // do reduction in shared memory
+        // 1-bit right shift = divide by two to the power 1
+        for (int s = reductionStart; s > 0; s >>= 1) {
 
-            // DEBUG
-            // if (RootbeerGpu.getThreadId() == 0) {
-            // for (int t = 0; t < m_N; t++) {
-            // System.out.println("colId: " + colId + " j: " + j + " value: "
-            // + RootbeerGpu.getSharedDouble(t * 8));
-            // }
-            // }
-            // Sync all threads within a block
-            // RootbeerGpu.syncthreads();
-
-            // do reduction in shared memory
-            // 1-bit right shift = divide by two to the power 1
-            for (int s = reductionStart; s > 0; s >>= 1) {
-
-              if ((thread_idxx < s) && (thread_idxx + s) < reductionLimit) {
-                // sh_mem[tid] += sh_mem[tid + s];
-                RootbeerGpu.setSharedDouble(
-                    8 + thread_idxx * 8,
-                    RootbeerGpu.getSharedDouble(8 + thread_idxx * 8)
-                        + RootbeerGpu
-                            .getSharedDouble(8 + (thread_idxx + s) * 8));
-              }
-
-              // Sync all threads within a block
-              RootbeerGpu.syncthreads();
-            }
-
-            // DEBUG
-            // if (RootbeerGpu.getThreadId() == 0) {
-            // System.out.println("colId: " + colId + " j: " + j + " sum: "
-            // + RootbeerGpu.getSharedDouble(0));
-            // }
-
-            if (thread_idxx == 0) {
-              RootbeerGpu.setSharedDouble(0, RootbeerGpu.getSharedDouble(0)
-                  + RootbeerGpu.getSharedDouble(8));
-            }
-
-            // Sync all threads within a block
-            RootbeerGpu.syncthreads();
-
-          } // for (int l = 0; l < rowsPerThread; l++)
-
-          if (thread_idxx == 0) {
-            matrixC[colId][j] = RootbeerGpu.getSharedDouble(0);
+          if ((thread_idxx < s) && (thread_idxx + s) < reductionLimit) {
+            // sh_mem[tid] += sh_mem[tid + s];
+            RootbeerGpu.setSharedDouble(
+                8 + thread_idxx * 8,
+                RootbeerGpu.getSharedDouble(8 + thread_idxx * 8)
+                    + RootbeerGpu.getSharedDouble(8 + (thread_idxx + s) * 8));
           }
 
           // Sync all threads within a block
-          // RootbeerGpu.syncthreads();
+          RootbeerGpu.syncthreads();
+        }
 
-        } // for (int j = 0; j < m_L; j++)
+        if (thread_idxx == 0) {
+          RootbeerGpu.setSharedDouble(0, RootbeerGpu.getSharedDouble(0)
+              + RootbeerGpu.getSharedDouble(8));
+        }
 
-      } // if (colId < m_M)
+        // Sync all threads within a block
+        RootbeerGpu.syncthreads();
 
-    } // for (int i = 0; i < columnsPerBlock
+      } // for (int l = 0; l < rowsPerThread; l++)
+
+      if (thread_idxx == 0) {
+        matrixC[colAId][colBId] = RootbeerGpu.getSharedDouble(0);
+      }
+
+      // Sync all threads within a block
+      // RootbeerGpu.syncthreads();
+
+    } // if (colId < N)
   }
 
   private int divup(int x, int y) {
@@ -228,8 +199,7 @@ public class MatrixMultiplication4Kernel implements Kernel {
     int gridSize = n * l;
     int blockSize = 1024;
 
-    System.out.println("gridSize: " + gridSize + " MaxInt: "
-        + Integer.MAX_VALUE);
+    System.out.println("gridSize: " + gridSize);
     System.out.println("blockSize: " + blockSize);
     System.out.println("n: " + n);
     System.out.println("m: " + m);
