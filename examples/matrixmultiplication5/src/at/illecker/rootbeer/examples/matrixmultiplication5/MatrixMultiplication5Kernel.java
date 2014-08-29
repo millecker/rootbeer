@@ -79,8 +79,8 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // is most likely stored in a register
     // int gridSize = m_gridSize;
     // int blockSize = m_blockSize;
-    // int N = m_N;
-    int M = m_M;
+    int N = m_N;
+    // int M = m_M;
     int L = m_L;
     int tileWidth = m_tileWidth;
     int subMatricesPerThread = m_subMatricesPerThread;
@@ -113,7 +113,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
     for (int m = 0; m < subMatricesPerThread; m++) {
       int aRowIndex = (m * tileWidth) + threadRow;
       int aColIndex = (blockRow * tileWidth) + threadCol;
-      int aValueIndex = (aRowIndex * M) + aColIndex;
+      int aValueIndex = (aRowIndex * N) + aColIndex;
 
       int bRowIndex = (m * tileWidth) + threadRow;
       int bColIndex = destCol;
@@ -123,7 +123,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
       double bValue = matrixB[bValueIndex];
 
       // DEBUG
-      // if (block_idxx == 0) {
+      // if (thread_idxx == 0) {
       // print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
       // + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
       // + threadCol + " dest(x,y): " + destRow + "," + destCol + " m:" + m
@@ -137,27 +137,41 @@ public class MatrixMultiplication5Kernel implements Kernel {
       RootbeerGpu.setSharedDouble(thread_idxx * 8, aValue);
       // store the bValue into shared memory at location
       // 1024 is the offset for the row of matrix A
-      RootbeerGpu.setSharedDouble(1024 + (thread_idxx * 8), bValue);
+      RootbeerGpu.setSharedDouble((1024 + thread_idxx) * 8, bValue);
 
       // sync threads within a block to make sure the sub-matrices are loaded
       RootbeerGpu.syncthreads();
 
+      // DEBUG
+      // if (thread_idxx == 0) {
+      // print("SharedMemory at m=" + m);
+      // for (int i = 0; i < M; i++) {
+      // for (int j = 0; j < N; j++) {
+      // System.out.print("[" + (((i * N) + j) * 8) + "]"
+      // + RootbeerGpu.getSharedDouble(((i * N) + j) * 8) + ",");
+      // }
+      // System.out.println();
+      // }
+      // }
+
       // loop over all of aValues and bValues
       for (int k = 0; k < tileWidth; k++) {
         // read the aValue from shared memory
-        aValue = RootbeerGpu.getSharedDouble((k * tileWidth + threadRow) * 8);
+        aValueIndex = (k * tileWidth + threadRow) * 8;
+        aValue = RootbeerGpu.getSharedDouble(aValueIndex);
         // read the bValue from shared memory
-        bValue = RootbeerGpu
-            .getSharedDouble(1024 + (k * tileWidth + threadCol) * 8);
+        bValueIndex = (1024 + k * tileWidth + threadCol) * 8;
+        bValue = RootbeerGpu.getSharedDouble(bValueIndex);
 
         // multiply aValue and bValue and accumulate
         sum += aValue * bValue;
 
         // DEBUG
-        // if (block_idxx == 0) {
+        // if (thread_idxx == 0) {
         // print("blockId(x,y)= " + blockRow + "," + blockCol + " threadId: "
-        // + RootbeerGpu.getThreadId() + " aValue: " + aValue + " bValue: "
-        // + bValue + " sum: " + sum);
+        // + RootbeerGpu.getThreadId() + " aValueIndex: " + aValueIndex
+        // + " aValue: " + aValue + " bValueIndex: " + bValueIndex
+        // + " bValue: " + bValue + " sum: " + sum);
         // }
       }
 
@@ -172,7 +186,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
     matrixC[cValueIndex] = sum;
 
     // DEBUG
-    // if (block_idxx == 0) {
+    // if (thread_idxx == 0) {
     // print("blockId(x,y)=" + blockRow + "," + blockCol + " threadId: "
     // + RootbeerGpu.getThreadId() + " threadId(x,y)=" + threadRow + ","
     // + threadCol + " dest(x,y): " + destRow + "," + destCol
@@ -180,15 +194,15 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // }
   }
 
-  // public synchronized void print(String s) {
-  // System.out.println(s);
-  // }
+  public synchronized void print(String s) {
+    System.out.println(s);
+  }
 
   public static void main(String[] args) {
     int tileWidth = TILE_WIDTH;
-    int n = 32;
-    int m = 32;
-    int l = 32;
+    int n = 1024;
+    int m = 1024;
+    int l = 1024;
     boolean isDebugging = false;
 
     // parse arguments
@@ -226,7 +240,7 @@ public class MatrixMultiplication5Kernel implements Kernel {
     System.out.println("m: " + m);
     System.out.println("l: " + l);
     System.out.println("subMatricesPerThread: " + subMatricesPerThread);
-    
+
     double[] matrixA = createRandomMatrix(n, m, new Random(42L));
     double[] transposedMatrixAgpu = transposeMatrix(matrixA, n, m);
     double[] matrixB = createRandomMatrix(m, l, new Random(1337L));
