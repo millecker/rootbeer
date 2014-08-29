@@ -16,7 +16,7 @@
 		</jar>
 	</target>
 	<target name="run" depends="jar">
-		<echo>java -Xmx4G -jar ../../rootbeer-master-branch.jar MatrixMultiplication5.jar MatrixMultiplication5-GPU.jar -64bit -noexceptions -noarraychecks -shared-mem-size 16396</echo>
+		<echo>java -Xms4G -Xmx4G -jar ../../rootbeer-master-branch.jar MatrixMultiplication5.jar MatrixMultiplication5-GPU.jar -64bit -noexceptions -noarraychecks -shared-mem-size 16408</echo>
 		<exec executable="java">
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
@@ -26,12 +26,13 @@
 			<arg value="-64bit" />
 			<arg value="-noexceptions" />
 			<arg value="-noarraychecks" />
-			<arg value="-shared-mem-size 16396" />
-			<arg value="-computecapability sm_35" />
+			<arg value="-shared-mem-size 16408" />
+<!--			<arg value="-computecapability sm_35" /> -->
 <!--			<arg value="-maxrregcount 32" /> -->
 		</exec>
-		<echo>java -Xmx4G -jar MatrixMultiplication5-GPU.jar</echo>
+		<echo>java -Xms4G -Xmx4G -jar MatrixMultiplication5-GPU.jar</echo>
 		<exec executable="java">
+			<arg value="-Xms4G" />
 			<arg value="-Xmx4G" />
 			<arg value="-jar" />
 			<arg value="MatrixMultiplication5-GPU.jar" />

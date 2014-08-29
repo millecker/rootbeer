@@ -62,9 +62,11 @@ public class MatrixMultiplication5Kernel implements Kernel {
 
   // SharedMemory per block
   // blockSize = 1024
-  // => 12 (needed by Rootbeer) + (2 * 1024 * 8 (double)) = 16396 bytes
+  // => 24 bytes (needed by Rootbeer)
+  // + (2 * 1024 * 8)
+  // = 16408 bytes
   //
-  // based on
+  // Implementation is based on
   // http://www.shodor.org/media/content//petascale/materials/UPModules/matrixMultiplication/moduleDocument.pdf
   //
   public void gpuMethod() {
@@ -165,8 +167,8 @@ public class MatrixMultiplication5Kernel implements Kernel {
       RootbeerGpu.syncthreads();
     }
 
-    int cValueIndex = destRow * L + destCol;
     // update the target cValue with the sum
+    int cValueIndex = destRow * L + destCol;
     matrixC[cValueIndex] = sum;
 
     // DEBUG
@@ -176,12 +178,11 @@ public class MatrixMultiplication5Kernel implements Kernel {
     // + threadCol + " dest(x,y): " + destRow + "," + destCol
     // + " setMatrixC at Index: " + cValueIndex + " sum: " + sum);
     // }
-
   }
 
-  public synchronized void print(String s) {
-    System.out.println(s);
-  }
+  // public synchronized void print(String s) {
+  // System.out.println(s);
+  // }
 
   public static void main(String[] args) {
     int tileWidth = TILE_WIDTH;
@@ -224,7 +225,8 @@ public class MatrixMultiplication5Kernel implements Kernel {
     System.out.println("n: " + n);
     System.out.println("m: " + m);
     System.out.println("l: " + l);
-
+    System.out.println("subMatricesPerThread: " + subMatricesPerThread);
+    
     double[] matrixA = createRandomMatrix(n, m, new Random(42L));
     double[] transposedMatrixAgpu = transposeMatrix(matrixA, n, m);
     double[] matrixB = createRandomMatrix(m, l, new Random(1337L));
